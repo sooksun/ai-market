@@ -4,9 +4,9 @@ export function PageHeader({
   subtitle,
   actions,
 }: {
-  eyebrow?: string;
-  title: string;
-  subtitle?: string;
+  eyebrow?: React.ReactNode;
+  title: React.ReactNode;
+  subtitle?: React.ReactNode;
   actions?: React.ReactNode;
 }) {
   return (

@@ -7,6 +7,14 @@ import type {
   ParseItemsResponse,
   ProjectSummary,
 } from '@ai-market/shared';
+import { Card } from './ui/card';
+import { Button } from './ui/button';
+import { Field, TextInput, Textarea, Select } from './ui/form';
+import { SectionTitle } from './ui/page-header';
+import { Confidence } from './ui/confidence';
+import { Icon } from './ui/icon';
+import { Tabs } from './ui/tabs';
+import { classNames } from './ui/format';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3100/api/v1';
 
@@ -67,11 +75,9 @@ export function PurchaseRequestForm({
   function updateItem(idx: number, patch: Partial<ItemRow>) {
     setItems((prev) => prev.map((it, i) => (i === idx ? { ...it, ...patch } : it)));
   }
-
   function addItem() {
     setItems((prev) => [...prev, { ...EMPTY_ROW }]);
   }
-
   function removeItem(idx: number) {
     setItems((prev) => prev.filter((_, i) => i !== idx));
   }
@@ -171,37 +177,27 @@ export function PurchaseRequestForm({
   }
 
   return (
-    <form onSubmit={onSubmit} className="space-y-6">
-      <section className="rounded-md border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 className="text-base font-semibold text-slate-800">ข้อมูลทั่วไป</h2>
-        <label className="mt-4 block text-sm">
-          เรื่อง
-          <input
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            required
-            className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-          />
-        </label>
-        <label className="mt-4 block text-sm">
-          เหตุผลความจำเป็น
-          <textarea
-            value={reason}
-            onChange={(e) => setReason(e.target.value)}
-            required
-            rows={3}
-            className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-          />
-        </label>
-
-        <div className="mt-4 grid gap-4 sm:grid-cols-2">
-          <label className="block text-sm">
-            โครงการ <span className="text-xs text-slate-400">(เลือกได้ภายหลัง)</span>
-            <select
-              value={projectId}
-              onChange={(e) => setProjectId(e.target.value)}
-              className="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"
-            >
+    <form onSubmit={onSubmit} className="space-y-5">
+      <Card className="p-5">
+        <SectionTitle
+          icon={<Icon name="FileEdit" className="w-3.5 h-3.5" />}
+          title="ข้อมูลคำขอ"
+          sub="กรอกชื่อคำขอ โครงการ และเหตุผลความจำเป็น"
+        />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Field label="ชื่อคำขอซื้อ" required className="md:col-span-2">
+            <TextInput
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              required
+              placeholder="เช่น จัดซื้อคอมพิวเตอร์ตั้งโต๊ะห้องเรียน ม.6/2"
+            />
+          </Field>
+          <Field
+            label="โครงการ"
+            hint={projects.length === 0 ? 'รอ Phase 2 เปิด UI ตั้งโครงการ' : 'เลือกได้ภายหลัง'}
+          >
+            <Select value={projectId} onChange={(e) => setProjectId(e.target.value)}>
               <option value="">— ยังไม่ระบุ —</option>
               {projects.map((p) => (
                 <option key={p.id} value={p.id}>
@@ -209,286 +205,277 @@ export function PurchaseRequestForm({
                   {p.name} (ปี {p.fiscalYear})
                 </option>
               ))}
-            </select>
-            {projects.length === 0 && (
-              <p className="mt-1 text-xs text-slate-500">
-                ยังไม่มีโครงการในระบบ — Phase 2 จะเปิด UI ตั้งโครงการให้
-              </p>
-            )}
-          </label>
-
-          <label className="block text-sm">
-            แหล่งงบ <span className="text-xs text-slate-400">(เลือกได้ภายหลัง)</span>
-            <select
+            </Select>
+          </Field>
+          <Field
+            label="แหล่งงบประมาณ"
+            hint={budgetSources.length === 0 ? 'รอ Phase 2 เปิด UI ตั้งงบ' : 'เลือกได้ภายหลัง'}
+          >
+            <Select
               value={budgetSourceId}
               onChange={(e) => setBudgetSourceId(e.target.value)}
-              className="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"
             >
               <option value="">— ยังไม่ระบุ —</option>
               {budgetSources.map((b) => (
                 <option key={b.id} value={b.id}>
                   {b.code ? `[${b.code}] ` : ''}
-                  {b.name} · {b.type} · วงเงิน{' '}
-                  {Number(b.totalAmount).toLocaleString('th-TH')} บาท
+                  {b.name} · {b.type}
                 </option>
               ))}
-            </select>
-            {budgetSources.length === 0 && (
-              <p className="mt-1 text-xs text-slate-500">
-                ยังไม่มีแหล่งงบในระบบ — Phase 2 จะเปิด UI ตั้งงบให้
-              </p>
-            )}
-          </label>
-        </div>
-      </section>
-
-      <section className="rounded-md border border-slate-200 bg-white p-6 shadow-sm">
-        <div className="flex items-center justify-between">
-          <h2 className="text-base font-semibold text-slate-800">รายการพัสดุ</h2>
-          <button
-            type="button"
-            onClick={addItem}
-            className="rounded-md border border-slate-300 px-3 py-1 text-xs hover:bg-slate-50"
+            </Select>
+          </Field>
+          <Field
+            label="เหตุผลความจำเป็น"
+            required
+            hint="AI ช่วยปรับเป็นภาษาราชการได้ใน Phase ถัดไป"
+            className="md:col-span-2"
           >
-            + เพิ่มแถว
-          </button>
+            <Textarea
+              rows={3}
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              required
+              placeholder="ทดแทนเครื่องคอมพิวเตอร์เดิมที่ใช้งานมากว่า 8 ปี เพื่อรองรับการเรียนการสอน..."
+            />
+          </Field>
         </div>
+      </Card>
 
-        <div className="mt-4 rounded-md border border-dashed border-brand-200 bg-brand-50/50 p-4">
-          <p className="text-sm font-medium text-brand-700">✨ ให้ AI ช่วยแยกรายการ</p>
+      <Card className="p-5">
+        <SectionTitle
+          icon={<Icon name="Package" className="w-3.5 h-3.5" />}
+          title="รายการพัสดุ"
+          sub={`${items.length} รายการ`}
+          action={
+            <Button type="button" size="sm" variant="outline" icon="Plus" onClick={addItem}>
+              เพิ่มแถว
+            </Button>
+          }
+        />
 
-          <div className="mt-2 inline-flex rounded-md border border-slate-300 bg-white p-0.5 text-xs">
-            <button
-              type="button"
-              onClick={() => setParseTab('text')}
-              className={`rounded px-3 py-1 ${
-                parseTab === 'text'
-                  ? 'bg-brand-500 text-white'
-                  : 'text-slate-700 hover:bg-slate-100'
-              }`}
-            >
-              วางข้อความ
-            </button>
-            <button
-              type="button"
-              onClick={() => setParseTab('file')}
-              className={`rounded px-3 py-1 ${
-                parseTab === 'file'
-                  ? 'bg-brand-500 text-white'
-                  : 'text-slate-700 hover:bg-slate-100'
-              }`}
-            >
-              อัปโหลดไฟล์ (Excel / CSV)
-            </button>
+        {/* AI parse panel */}
+        <div className="mt-4 rounded-2xl grad-brand-soft border border-brand-100 dark:border-brand-800/40 p-4">
+          <div className="flex items-center gap-2">
+            <span className="grid place-items-center w-7 h-7 rounded-lg grad-brand text-white">
+              <Icon name="Sparkles" className="w-3.5 h-3.5" strokeWidth={2} />
+            </span>
+            <div className="text-sm font-semibold text-brand-800 dark:text-brand-100">
+              ให้ AI ช่วยแยกรายการ
+            </div>
+          </div>
+
+          <div className="mt-3">
+            <Tabs
+              tabs={[
+                { value: 'text', label: 'วางข้อความ' },
+                { value: 'file', label: 'อัปโหลดไฟล์ (Excel / CSV)' },
+              ]}
+              value={parseTab}
+              onChange={(v) => setParseTab(v as 'text' | 'file')}
+            />
           </div>
 
           {parseTab === 'text' ? (
-            <>
-              <p className="mt-2 text-xs text-slate-600">
-                วางข้อความแบบรวม เช่น "ปากกา 10 ด้าม กระดาษ A4 5 รีม"
-              </p>
-              <textarea
-                value={parseInput}
-                onChange={(e) => setParseInput(e.target.value)}
-                rows={3}
-                className="mt-2 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"
-                placeholder="ปากกาน้ำเงิน 10 ด้าม กระดาษ A4 5 รีม ..."
-              />
-            </>
+            <Textarea
+              rows={3}
+              value={parseInput}
+              onChange={(e) => setParseInput(e.target.value)}
+              placeholder='เช่น "ปากกาน้ำเงิน 10 ด้าม กระดาษ A4 5 รีม ..."'
+              className="mt-3"
+            />
           ) : (
-            <>
-              <p className="mt-2 text-xs text-slate-600">
-                เลือกไฟล์ .xlsx .xls .csv หรือ .txt — ขนาดไม่เกิน 5MB · AI จะอ่าน sheet แรก
-              </p>
+            <div className="mt-3">
               <input
                 type="file"
                 accept=".xlsx,.xls,.csv,.txt,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv,text/plain"
                 onChange={(e) => setParseFile(e.target.files?.[0] ?? null)}
-                className="mt-2 block w-full text-sm text-slate-700 file:mr-3 file:rounded-md file:border-0 file:bg-brand-50 file:px-3 file:py-1 file:text-xs file:font-medium file:text-brand-700 hover:file:bg-brand-100"
+                className="block w-full text-sm text-ink-700 dark:text-ink-100 file:mr-3 file:rounded-lg file:border-0 file:bg-brand-100 dark:file:bg-brand-900/40 file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-brand-700 dark:file:text-brand-200 hover:file:bg-brand-200 dark:hover:file:bg-brand-900/60"
               />
               {parseFile && (
-                <p className="mt-1 text-xs text-slate-500">
-                  ไฟล์: {parseFile.name} ({(parseFile.size / 1024).toFixed(1)} KB)
+                <p className="mt-1.5 text-xs text-ink-500 dark:text-ink-300">
+                  ไฟล์: <span className="font-mono">{parseFile.name}</span> ({(parseFile.size / 1024).toFixed(1)} KB)
                 </p>
               )}
-            </>
+              <p className="mt-1.5 text-[11px] text-ink-400 dark:text-ink-300">
+                รองรับ .xlsx / .xls / .csv / .txt — ไม่เกิน 5MB · AI จะอ่าน sheet แรก
+              </p>
+            </div>
           )}
 
-          <div className="mt-2 flex flex-wrap items-center gap-3">
-            <button
+          <div className="mt-3 flex flex-wrap items-center gap-3">
+            <Button
               type="button"
+              size="sm"
+              icon="Sparkles"
               onClick={callAiParse}
               disabled={parsing || (parseTab === 'text' ? !parseInput : !parseFile)}
-              className="rounded-md bg-brand-500 px-3 py-1 text-xs font-medium text-white hover:bg-brand-600 disabled:opacity-50"
             >
               {parsing ? 'กำลังให้ AI ช่วย...' : 'ให้ AI แยกรายการ'}
-            </button>
-            <label className="flex items-center gap-1 text-xs text-slate-600">
+            </Button>
+            <label className="flex items-center gap-1.5 text-[12px] text-ink-600 dark:text-ink-200">
               <input
                 type="radio"
                 name="parseMode"
                 checked={parseMode === 'replace'}
                 onChange={() => setParseMode('replace')}
+                className="accent-brand-500"
               />
               แทนที่ทั้งหมด
             </label>
-            <label className="flex items-center gap-1 text-xs text-slate-600">
+            <label className="flex items-center gap-1.5 text-[12px] text-ink-600 dark:text-ink-200">
               <input
                 type="radio"
                 name="parseMode"
                 checked={parseMode === 'append'}
                 onChange={() => setParseMode('append')}
+                className="accent-brand-500"
               />
               เพิ่มต่อท้าย
             </label>
-            {parseError && <span className="text-xs text-red-600">{parseError}</span>}
+            {parseError && (
+              <span className="text-xs text-rose-600 dark:text-rose-300">{parseError}</span>
+            )}
           </div>
 
           {parsePreview && (
-            <div className="mt-3 rounded-md border border-slate-200 bg-white p-3">
-              <p className="text-xs text-slate-500">
+            <Card className="mt-3 p-3">
+              <div className="text-xs text-ink-500 dark:text-ink-300">
                 AI เสนอ {parsePreview.items.length} รายการ · invocation{' '}
                 <code className="font-mono">{parsePreview.invocationId}</code>
-              </p>
+              </div>
               <ul className="mt-2 space-y-1 text-sm">
                 {parsePreview.items.map((p, i) => (
-                  <li key={i} className="flex items-center justify-between gap-3">
+                  <li key={i} className="flex items-center justify-between gap-3 text-ink-700 dark:text-ink-100">
                     <span>
                       {p.name} — {p.quantity} {p.unit}
                     </span>
-                    <span
-                      className={`rounded px-1.5 text-xs ${
-                        p.confidence >= 0.9
-                          ? 'bg-green-100 text-green-800'
-                          : p.confidence >= 0.7
-                            ? 'bg-yellow-100 text-yellow-800'
-                            : 'bg-red-100 text-red-800'
-                      }`}
-                    >
-                      {(p.confidence * 100).toFixed(0)}%
-                    </span>
+                    <Confidence value={p.confidence} />
                   </li>
                 ))}
               </ul>
               {parsePreview.warnings.length > 0 && (
-                <ul className="mt-2 space-y-0.5 text-xs text-amber-700">
+                <ul className="mt-2 space-y-0.5 text-xs text-amber-700 dark:text-amber-300">
                   {parsePreview.warnings.map((w, i) => (
-                    <li key={i}>⚠ {w.message}</li>
+                    <li key={i} className="flex items-center gap-1">
+                      <Icon name="AlertTriangle" className="w-3 h-3" />
+                      {w.message}
+                    </li>
                   ))}
                 </ul>
               )}
               <div className="mt-3 flex gap-2">
-                <button
+                <Button
                   type="button"
+                  size="sm"
+                  variant="primary"
+                  icon="Check"
                   onClick={applyParsed}
-                  className="rounded-md bg-green-600 px-3 py-1 text-xs font-medium text-white hover:bg-green-700"
                 >
                   {parseMode === 'append' ? 'เพิ่มเข้ารายการ' : 'ใช้รายการนี้แทน'}
-                </button>
-                <button
+                </Button>
+                <Button
                   type="button"
+                  size="sm"
+                  variant="ghost"
                   onClick={() => setParsePreview(null)}
-                  className="rounded-md border border-slate-300 px-3 py-1 text-xs"
                 >
                   ยกเลิก
-                </button>
+                </Button>
               </div>
-            </div>
+            </Card>
           )}
         </div>
 
-        <table className="mt-4 w-full text-sm">
-          <thead className="text-left text-xs uppercase text-slate-500">
-            <tr>
-              <th className="w-10 px-2 py-2">#</th>
-              <th className="px-2 py-2">ชื่อ</th>
-              <th className="w-24 px-2 py-2">จำนวน</th>
-              <th className="w-24 px-2 py-2">หน่วย</th>
-              <th className="w-32 px-2 py-2">ราคาประมาณ</th>
-              <th className="w-10"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {items.map((it, idx) => (
-              <tr key={idx} className="border-t border-slate-100">
-                <td className="px-2 py-2 text-xs text-slate-500">{idx + 1}</td>
-                <td className="px-2 py-2">
-                  <input
-                    value={it.name}
-                    onChange={(e) => updateItem(idx, { name: e.target.value })}
-                    required
-                    className="w-full rounded border border-slate-300 px-2 py-1 text-sm"
-                  />
-                </td>
-                <td className="px-2 py-2">
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={it.quantity}
-                    onChange={(e) => updateItem(idx, { quantity: Number(e.target.value) })}
-                    required
-                    className="w-full rounded border border-slate-300 px-2 py-1 text-sm"
-                  />
-                </td>
-                <td className="px-2 py-2">
-                  <input
-                    value={it.unit}
-                    onChange={(e) => updateItem(idx, { unit: e.target.value })}
-                    required
-                    className="w-full rounded border border-slate-300 px-2 py-1 text-sm"
-                  />
-                </td>
-                <td className="px-2 py-2">
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={it.unitPriceEst ?? ''}
-                    onChange={(e) =>
-                      updateItem(idx, {
-                        unitPriceEst: e.target.value ? Number(e.target.value) : undefined,
-                      })
-                    }
-                    className="w-full rounded border border-slate-300 px-2 py-1 text-sm"
-                  />
-                </td>
-                <td className="px-2 py-2 text-right">
-                  {items.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => removeItem(idx)}
-                      className="text-xs text-red-600 hover:underline"
-                    >
-                      ลบ
-                    </button>
-                  )}
-                </td>
+        {/* Items table */}
+        <div className="mt-4 overflow-x-auto -mx-2">
+          <table className="w-full text-sm">
+            <thead className="text-[11px] uppercase tracking-wider text-ink-400 dark:text-ink-300">
+              <tr className="text-left">
+                <th className="font-medium px-2 py-2 w-8">#</th>
+                <th className="font-medium px-2 py-2">ชื่อ</th>
+                <th className="font-medium px-2 py-2 w-24 text-right">จำนวน</th>
+                <th className="font-medium px-2 py-2 w-24">หน่วย</th>
+                <th className="font-medium px-2 py-2 w-32 text-right">ราคาประมาณ</th>
+                <th className="font-medium px-2 py-2 w-10" />
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </section>
+            </thead>
+            <tbody className="divide-y divide-ink-100 dark:divide-white/5">
+              {items.map((it, idx) => (
+                <tr key={idx}>
+                  <td className="px-2 py-2 text-ink-400 dark:text-ink-300 tabular-nums">
+                    {idx + 1}
+                  </td>
+                  <td className="px-2 py-2">
+                    <TextInput
+                      value={it.name}
+                      onChange={(e) => updateItem(idx, { name: e.target.value })}
+                      required
+                    />
+                  </td>
+                  <td className="px-2 py-2">
+                    <TextInput
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={it.quantity}
+                      onChange={(e) => updateItem(idx, { quantity: Number(e.target.value) })}
+                      required
+                      className="text-right"
+                    />
+                  </td>
+                  <td className="px-2 py-2">
+                    <TextInput
+                      value={it.unit}
+                      onChange={(e) => updateItem(idx, { unit: e.target.value })}
+                      required
+                    />
+                  </td>
+                  <td className="px-2 py-2">
+                    <TextInput
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={it.unitPriceEst ?? ''}
+                      onChange={(e) =>
+                        updateItem(idx, {
+                          unitPriceEst: e.target.value ? Number(e.target.value) : undefined,
+                        })
+                      }
+                      className="text-right"
+                    />
+                  </td>
+                  <td className="px-2 py-2 text-right">
+                    {items.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => removeItem(idx)}
+                        className="text-ink-300 hover:text-rose-500 transition-colors p-1"
+                        aria-label="ลบรายการ"
+                      >
+                        <Icon name="Trash2" className="w-4 h-4" />
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Card>
 
       {error && (
-        <div className="rounded-md bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
+        <div className="rounded-2xl bg-rose-50 dark:bg-rose-900/30 ring-1 ring-rose-200/60 dark:ring-rose-700/40 px-4 py-3 text-sm text-rose-700 dark:text-rose-200">
+          {error}
+        </div>
       )}
 
       <div className="flex justify-end gap-3">
-        <button
-          type="button"
-          onClick={() => router.back()}
-          className="rounded-md border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-100"
-        >
+        <Button type="button" variant="ghost" onClick={() => router.back()}>
           ยกเลิก
-        </button>
-        <button
-          type="submit"
-          disabled={submitting}
-          className="rounded-md bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600 disabled:opacity-50"
-        >
+        </Button>
+        <Button type="submit" disabled={submitting} icon="Save">
           {submitting ? 'กำลังบันทึก...' : (submitLabel ?? 'บันทึก')}
-        </button>
+        </Button>
       </div>
     </form>
   );

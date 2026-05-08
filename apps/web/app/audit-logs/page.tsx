@@ -4,6 +4,10 @@ import { getTranslations } from 'next-intl/server';
 import { requireUser } from '@/lib/auth';
 import { apiFetch } from '@/lib/api';
 import { AppShell } from '@/components/app-shell';
+import { PageHeader } from '@/components/ui/page-header';
+import { Card } from '@/components/ui/card';
+import { Icon } from '@/components/ui/icon';
+import { classNames } from '@/components/ui/format';
 import { AuditLogFilters } from './filters';
 import { AuditLogRow } from './row';
 
@@ -74,56 +78,61 @@ export default async function AuditLogsPage({
 
   return (
     <AppShell user={user}>
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-semibold text-slate-800">Audit Logs</h1>
-          <p className="text-sm text-slate-500">
-            ประวัติการเปลี่ยนแปลงข้อมูลทั้งระบบ — เห็นเฉพาะของโรงเรียนคุณ
-          </p>
-        </div>
-        <div className="text-sm text-slate-500">
-          พบ {list.meta.total.toLocaleString('th-TH')} รายการ · หน้า {list.meta.page}/
-          {list.meta.totalPages || 1}
-        </div>
-      </div>
+      <div className="fade-up">
+        <PageHeader
+          eyebrow="ตรวจสอบ"
+          title="Audit Logs"
+          subtitle="ประวัติการเปลี่ยนแปลงข้อมูลทั้งระบบ — เห็นเฉพาะของโรงเรียนคุณ"
+          actions={
+            <span className="text-sm text-ink-500 dark:text-ink-300">
+              พบ {list.meta.total.toLocaleString('th-TH')} รายการ · หน้า {list.meta.page}/
+              {list.meta.totalPages || 1}
+            </span>
+          }
+        />
 
-      <div className="mt-4">
-        <AuditLogFilters initial={params} />
-      </div>
+        <div className="mb-4">
+          <AuditLogFilters initial={params} />
+        </div>
 
-      <div className="mt-4 overflow-hidden rounded-md border border-slate-200 bg-white">
-        <table className="w-full text-sm">
-          <thead className="bg-slate-50 text-left text-xs uppercase text-slate-500">
-            <tr>
-              <th className="w-44 px-4 py-3">เวลา</th>
-              <th className="w-48 px-4 py-3">ผู้ใช้</th>
-              <th className="px-4 py-3">การกระทำ</th>
-              <th className="px-4 py-3">เป้าหมาย</th>
-              <th className="w-10"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {list.data.length === 0 && (
+        <Card className="overflow-hidden">
+          <table className="w-full text-sm">
+            <thead className="bg-ink-50/60 dark:bg-ink-900/40 text-left text-[11px] uppercase tracking-wider text-ink-400 dark:text-ink-300">
               <tr>
-                <td colSpan={5} className="px-4 py-12 text-center text-slate-500">
-                  ไม่พบ audit log ตามเงื่อนไขที่ค้น
-                </td>
+                <th className="w-44 px-4 py-3 font-medium">เวลา</th>
+                <th className="w-48 px-4 py-3 font-medium">ผู้ใช้</th>
+                <th className="px-4 py-3 font-medium">การกระทำ</th>
+                <th className="px-4 py-3 font-medium">เป้าหมาย</th>
+                <th className="w-10" />
               </tr>
-            )}
-            {list.data.map((log) => (
-              <AuditLogRow
-                key={log.id}
-                log={log}
-                actionLabel={labelAction(log.action)}
-                entityLabel={labelEntity(log.entityType)}
-              />
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-ink-100 dark:divide-white/5">
+              {list.data.length === 0 && (
+                <tr>
+                  <td
+                    colSpan={5}
+                    className="px-4 py-16 text-center text-ink-400 dark:text-ink-300"
+                  >
+                    <Icon name="Search" className="mx-auto mb-2 h-8 w-8" />
+                    ไม่พบ audit log ตามเงื่อนไขที่ค้น
+                  </td>
+                </tr>
+              )}
+              {list.data.map((log) => (
+                <AuditLogRow
+                  key={log.id}
+                  log={log}
+                  actionLabel={labelAction(log.action)}
+                  entityLabel={labelEntity(log.entityType)}
+                />
+              ))}
+            </tbody>
+          </table>
 
-        {list.meta.totalPages > 1 && (
-          <Pagination currentPage={list.meta.page} totalPages={list.meta.totalPages} qs={qs} />
-        )}
+          {list.meta.totalPages > 1 && (
+            <Pagination currentPage={list.meta.page} totalPages={list.meta.totalPages} qs={qs} />
+          )}
+        </Card>
       </div>
     </AppShell>
   );
@@ -144,25 +153,31 @@ function Pagination({
   next.set('page', String(Math.min(totalPages, currentPage + 1)));
 
   return (
-    <div className="flex items-center justify-between border-t border-slate-200 bg-slate-50 px-4 py-2 text-xs text-slate-600">
+    <div className="flex items-center justify-between border-t border-ink-100 dark:border-white/5 bg-ink-50/40 dark:bg-ink-900/40 px-4 py-2 text-xs text-ink-500 dark:text-ink-300">
       <a
         href={`/audit-logs?${prev.toString()}`}
-        className={`rounded-md border border-slate-300 px-3 py-1 ${
-          currentPage <= 1 ? 'pointer-events-none opacity-40' : 'hover:bg-white'
-        }`}
+        className={classNames(
+          'inline-flex items-center gap-1 rounded-lg border border-ink-200 dark:border-white/10 px-3 py-1',
+          currentPage <= 1
+            ? 'pointer-events-none opacity-40'
+            : 'hover:bg-white dark:hover:bg-ink-800',
+        )}
       >
-        ← หน้าก่อน
+        <Icon name="ChevronLeft" className="w-3.5 h-3.5" /> หน้าก่อน
       </a>
-      <span>
+      <span className="tabular-nums">
         หน้า {currentPage} / {totalPages}
       </span>
       <a
         href={`/audit-logs?${next.toString()}`}
-        className={`rounded-md border border-slate-300 px-3 py-1 ${
-          currentPage >= totalPages ? 'pointer-events-none opacity-40' : 'hover:bg-white'
-        }`}
+        className={classNames(
+          'inline-flex items-center gap-1 rounded-lg border border-ink-200 dark:border-white/10 px-3 py-1',
+          currentPage >= totalPages
+            ? 'pointer-events-none opacity-40'
+            : 'hover:bg-white dark:hover:bg-ink-800',
+        )}
       >
-        หน้าถัดไป →
+        หน้าถัดไป <Icon name="ChevronRight" className="w-3.5 h-3.5" />
       </a>
     </div>
   );

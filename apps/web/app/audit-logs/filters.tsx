@@ -2,13 +2,17 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { Card } from '@/components/ui/card';
+import { Field, TextInput, Select } from '@/components/ui/form';
+import { Button } from '@/components/ui/button';
 
-const ENTITY_TYPES = ['', 'PurchaseRequest', 'AiInvocation', 'AiRiskFlag'];
+const ENTITY_TYPES = ['', 'PurchaseRequest', 'AiInvocation', 'AiRiskFlag', 'RuleConfig'];
 const ENTITY_TYPE_LABELS: Record<string, string> = {
   '': 'ทุกประเภท',
   PurchaseRequest: 'คำขอซื้อ',
   AiInvocation: 'การเรียก AI',
   AiRiskFlag: 'risk flag',
+  RuleConfig: 'rule config',
 };
 
 const ACTIONS = [
@@ -21,7 +25,11 @@ const ACTIONS = [
   'purchase_request.return',
   'purchase_request.approve_for_comparison',
   'purchase_request.dismiss_risk_flag',
+  'rule_config.create',
+  'rule_config.update',
+  'rule_config.delete',
   'ai.parse_items',
+  'ai.parse_items_upload',
   'ai.check_cloudiness',
 ];
 const ACTION_LABELS: Record<string, string> = {
@@ -34,7 +42,11 @@ const ACTION_LABELS: Record<string, string> = {
   'purchase_request.return': 'ส่งกลับแก้ไข',
   'purchase_request.approve_for_comparison': 'อนุมัติเข้ารอบเปรียบเทียบ',
   'purchase_request.dismiss_risk_flag': 'ปิด risk flag',
+  'rule_config.create': 'สร้าง rule config',
+  'rule_config.update': 'แก้ rule config',
+  'rule_config.delete': 'ลบ rule config',
   'ai.parse_items': 'AI: แยกรายการ',
+  'ai.parse_items_upload': 'AI: แยกรายการจากไฟล์',
   'ai.check_cloudiness': 'AI: ตรวจความคลุมเครือ',
 };
 
@@ -80,95 +92,57 @@ export function AuditLogFilters({ initial }: { initial: Initial }) {
   }
 
   return (
-    <form
-      onSubmit={apply}
-      className="grid grid-cols-1 gap-3 rounded-md border border-slate-200 bg-white p-4 shadow-sm md:grid-cols-3 lg:grid-cols-6"
-    >
-      <label className="text-xs">
-        ประเภทเป้าหมาย
-        <select
-          value={entityType}
-          onChange={(e) => setEntityType(e.target.value)}
-          className="mt-1 w-full rounded-md border border-slate-300 px-2 py-1 text-sm"
-        >
-          {ENTITY_TYPES.map((t) => (
-            <option key={t} value={t}>
-              {ENTITY_TYPE_LABELS[t] ?? t}
-            </option>
-          ))}
-        </select>
-      </label>
+    <Card className="p-4">
+      <form onSubmit={apply} className="grid grid-cols-1 gap-3 md:grid-cols-3 lg:grid-cols-6">
+        <Field label="ประเภทเป้าหมาย">
+          <Select value={entityType} onChange={(e) => setEntityType(e.target.value)}>
+            {ENTITY_TYPES.map((t) => (
+              <option key={t} value={t}>
+                {ENTITY_TYPE_LABELS[t] ?? t}
+              </option>
+            ))}
+          </Select>
+        </Field>
+        <Field label="การกระทำ">
+          <Select value={action} onChange={(e) => setAction(e.target.value)}>
+            {ACTIONS.map((a) => (
+              <option key={a} value={a}>
+                {ACTION_LABELS[a] ?? a}
+              </option>
+            ))}
+          </Select>
+        </Field>
+        <Field label="Entity ID">
+          <TextInput
+            value={entityId}
+            onChange={(e) => setEntityId(e.target.value)}
+            placeholder="ck..."
+            className="font-mono text-xs"
+          />
+        </Field>
+        <Field label="ตั้งแต่วันที่">
+          <TextInput type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
+        </Field>
+        <Field label="ถึงวันที่">
+          <TextInput type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
+        </Field>
+        <Field label="ค้นหา">
+          <TextInput
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="ค้นใน action / entity"
+          />
+        </Field>
 
-      <label className="text-xs">
-        การกระทำ
-        <select
-          value={action}
-          onChange={(e) => setAction(e.target.value)}
-          className="mt-1 w-full rounded-md border border-slate-300 px-2 py-1 text-sm"
-        >
-          {ACTIONS.map((a) => (
-            <option key={a} value={a}>
-              {ACTION_LABELS[a] ?? a}
-            </option>
-          ))}
-        </select>
-      </label>
-
-      <label className="text-xs">
-        Entity ID
-        <input
-          value={entityId}
-          onChange={(e) => setEntityId(e.target.value)}
-          placeholder="ck..."
-          className="mt-1 w-full rounded-md border border-slate-300 px-2 py-1 font-mono text-xs"
-        />
-      </label>
-
-      <label className="text-xs">
-        ตั้งแต่วันที่
-        <input
-          type="date"
-          value={dateFrom}
-          onChange={(e) => setDateFrom(e.target.value)}
-          className="mt-1 w-full rounded-md border border-slate-300 px-2 py-1 text-sm"
-        />
-      </label>
-
-      <label className="text-xs">
-        ถึงวันที่
-        <input
-          type="date"
-          value={dateTo}
-          onChange={(e) => setDateTo(e.target.value)}
-          className="mt-1 w-full rounded-md border border-slate-300 px-2 py-1 text-sm"
-        />
-      </label>
-
-      <label className="text-xs">
-        ค้นหา
-        <input
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder="ค้นใน action / entity"
-          className="mt-1 w-full rounded-md border border-slate-300 px-2 py-1 text-sm"
-        />
-      </label>
-
-      <div className="md:col-span-3 lg:col-span-6 flex justify-end gap-2">
-        <button
-          type="button"
-          onClick={reset}
-          className="rounded-md border border-slate-300 px-3 py-1 text-xs text-slate-700 hover:bg-slate-100"
-        >
-          ล้างตัวกรอง
-        </button>
-        <button
-          type="submit"
-          className="rounded-md bg-brand-500 px-3 py-1 text-xs font-medium text-white hover:bg-brand-600"
-        >
-          ค้นหา
-        </button>
-      </div>
-    </form>
+        <div className="md:col-span-3 lg:col-span-6 flex justify-end gap-2">
+          <Button type="button" variant="ghost" size="sm" onClick={reset} icon="X">
+            ล้างตัวกรอง
+          </Button>
+          <Button type="submit" size="sm" icon="Search">
+            ค้นหา
+          </Button>
+        </div>
+      </form>
+    </Card>
   );
 }

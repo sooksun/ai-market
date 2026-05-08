@@ -5,6 +5,8 @@ import { requireUser } from '@/lib/auth';
 import { apiFetch, ApiError } from '@/lib/api';
 import { AppShell } from '@/components/app-shell';
 import type { RuleConfig } from '@ai-market/shared';
+import { PageHeader } from '@/components/ui/page-header';
+import { Icon } from '@/components/ui/icon';
 import { RuleForm } from '../../rule-form';
 
 export default async function EditRuleConfigPage({
@@ -30,18 +32,24 @@ export default async function EditRuleConfigPage({
 
   return (
     <AppShell user={user}>
-      <div>
+      <div className="fade-up max-w-3xl">
         <Link
-          href="/admin/rule-configs"
-          className="text-xs text-brand-600 hover:underline"
+          href={'/admin/rule-configs' as never}
+          className="inline-flex items-center gap-1 text-xs text-brand-600 dark:text-brand-300 hover:underline mb-2"
         >
-          ← กลับไป Rule Configs
+          <Icon name="ChevronLeft" className="w-3 h-3" />
+          กลับไป Rule Configs
         </Link>
-        <h1 className="mt-1 text-xl font-semibold text-slate-800">
-          แก้ไข rule: <span className="font-mono">{rule.key}</span>
-        </h1>
-      </div>
-      <div className="mt-6">
+        <PageHeader
+          eyebrow="ตั้งค่าระบบ"
+          title={
+            <>
+              แก้ไข rule:{' '}
+              <span className="font-mono text-brand-600 dark:text-brand-300">{rule.key}</span>
+            </>
+          }
+          subtitle="ทุกการแก้ถูกบันทึก audit log"
+        />
         <RuleForm
           mode="edit"
           id={rule.id}

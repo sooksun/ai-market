@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { cookies } from 'next/headers';
 import { notFound, redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
@@ -13,6 +14,9 @@ import {
   type ProjectSummary,
   type PurchaseRequestStatus,
 } from '@ai-market/shared';
+import { Card } from '@/components/ui/card';
+import { Icon } from '@/components/ui/icon';
+import { PageHeader } from '@/components/ui/page-header';
 
 interface PrDetail {
   id: string;
@@ -44,7 +48,6 @@ export default async function EditRequestPage({
   const { id } = await params;
   const user = await requireUser();
   const cookieStore = await cookies();
-
   const cookie = cookieStore.toString();
 
   let pr: PrDetail;
@@ -61,27 +64,36 @@ export default async function EditRequestPage({
   ]);
   const tStatus = await getTranslations('prStatus');
 
-  // Owner-only
   if (pr.requesterId !== user.id) {
     redirect(`/requests/${id}`);
   }
 
-  // Status guard — show informative page if not editable
   if (!EDITABLE_STATUSES.includes(pr.status)) {
     return (
       <AppShell user={user}>
-        <div className="rounded-md border border-amber-200 bg-amber-50 p-6 text-sm text-amber-800">
-          <h1 className="text-base font-semibold">แก้ไขไม่ได้ในสถานะนี้</h1>
-          <p className="mt-1">
-            คำขอนี้อยู่ในสถานะ <strong>{tStatus(pr.status)}</strong> —
-            แก้ไขได้เฉพาะ DRAFT หรือ RETURNED เท่านั้น
-          </p>
-          <a
-            href={`/requests/${id}`}
-            className="mt-3 inline-block text-brand-600 hover:underline"
-          >
-            ← กลับไปดูคำขอ
-          </a>
+        <div className="fade-up max-w-xl">
+          <Card className="p-6">
+            <div className="flex items-start gap-3">
+              <span className="grid place-items-center w-9 h-9 rounded-xl bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-200">
+                <Icon name="AlertTriangle" className="w-4 h-4" />
+              </span>
+              <div>
+                <h1 className="text-base font-semibold text-ink-900 dark:text-white">
+                  แก้ไขไม่ได้ในสถานะนี้
+                </h1>
+                <p className="mt-1 text-sm text-ink-600 dark:text-ink-200">
+                  คำขอนี้อยู่ในสถานะ <strong>{tStatus(pr.status)}</strong> —
+                  แก้ไขได้เฉพาะ DRAFT หรือ RETURNED เท่านั้น
+                </p>
+                <Link
+                  href={`/requests/${id}` as never}
+                  className="mt-3 inline-block text-sm text-brand-600 dark:text-brand-300 hover:underline"
+                >
+                  ← กลับไปดูคำขอ
+                </Link>
+              </div>
+            </div>
+          </Card>
         </div>
       </AppShell>
     );
@@ -98,23 +110,22 @@ export default async function EditRequestPage({
 
   return (
     <AppShell user={user}>
-      <div className="flex items-start justify-between">
-        <div>
-          <p className="font-mono text-xs text-slate-500">{pr.docNo ?? '— (ยังไม่ได้ส่งเรื่อง)'}</p>
-          <h1 className="text-xl font-semibold text-slate-800">แก้ไขคำขอซื้อ</h1>
-          <p className="mt-1 text-xs text-slate-500">
-            สถานะปัจจุบัน: {tStatus(pr.status)}
-          </p>
-        </div>
-      </div>
+      <div className="fade-up">
+        <PageHeader
+          eyebrow={`คำขอซื้อ · ${pr.docNo ?? 'ยังไม่ได้ส่งเรื่อง'}`}
+          title="แก้ไขคำขอซื้อ"
+          subtitle={`สถานะปัจจุบัน: ${tStatus(pr.status)}`}
+        />
 
-      {pr.status === 'RETURNED' && (
-        <div className="mt-4 rounded-md border-l-4 border-red-500 bg-red-50 p-3 text-sm text-red-900">
-          คำขอนี้ถูกส่งกลับเพื่อแก้ไข — โปรดดูเหตุผลในแถบ "ความเสี่ยง / ข้อเตือน" ที่หน้าคำขอ
-        </div>
-      )}
+        {pr.status === 'RETURNED' && (
+          <div className="mb-4 rounded-2xl bg-rose-50 dark:bg-rose-900/30 ring-1 ring-rose-200/60 dark:ring-rose-700/40 px-4 py-3 text-sm text-rose-700 dark:text-rose-200 flex items-start gap-3">
+            <Icon name="MessageSquareWarning" className="w-4 h-4 mt-0.5" />
+            <p>
+              คำขอนี้ถูกส่งกลับเพื่อแก้ไข — โปรดดูเหตุผลในแถบ "ความเสี่ยง / ข้อเตือน" ที่หน้าคำขอ
+            </p>
+          </div>
+        )}
 
-      <div className="mt-6">
         <PurchaseRequestForm
           mode="edit"
           prId={pr.id}

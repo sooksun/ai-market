@@ -3,6 +3,9 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { PurchaseRequestStatus } from '@ai-market/shared';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/form';
+import { Card } from '@/components/ui/card';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3100/api/v1';
 
@@ -45,61 +48,65 @@ export function PrActions({ pr, isOwner, isProcurement }: Props) {
 
   if (isOwner && (pr.status === 'DRAFT' || pr.status === 'RETURNED')) {
     buttons.push(
-      <button
+      <Button
         key="submit"
         disabled={busy !== null}
         onClick={() => call('submit')}
-        className="rounded-md bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600 disabled:opacity-50"
+        icon="Send"
       >
         {busy === 'submit' ? 'กำลังส่ง...' : 'ส่งเรื่อง'}
-      </button>,
+      </Button>,
     );
   }
 
   if (isOwner && (pr.status === 'DRAFT' || pr.status === 'SUBMITTED')) {
     buttons.push(
-      <button
+      <Button
         key="withdraw"
+        variant="outline"
         disabled={busy !== null}
         onClick={() => call('withdraw')}
-        className="rounded-md border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-100 disabled:opacity-50"
+        icon="Undo2"
       >
         ถอนเรื่อง
-      </button>,
+      </Button>,
     );
   }
 
   if (isProcurement && pr.status === 'SUBMITTED') {
     buttons.push(
-      <button
+      <Button
         key="claim"
         disabled={busy !== null}
         onClick={() => call('claim')}
-        className="rounded-md bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600 disabled:opacity-50"
+        icon="ClipboardCheck"
       >
         รับเรื่องเข้าตรวจ
-      </button>,
+      </Button>,
     );
   }
 
   if (isProcurement && pr.status === 'REVIEWING') {
     buttons.push(
-      <button
+      <Button
         key="return"
+        variant="outline"
         disabled={busy !== null}
         onClick={() => setShowReturn(true)}
-        className="rounded-md border border-red-300 px-4 py-2 text-sm text-red-700 hover:bg-red-50 disabled:opacity-50"
+        icon="Undo2"
+        className="text-rose-700 dark:text-rose-300 ring-rose-300/60 dark:ring-rose-700/40 hover:bg-rose-50 dark:hover:bg-rose-900/30"
       >
         ส่งกลับแก้ไข
-      </button>,
-      <button
+      </Button>,
+      <Button
         key="approve"
         disabled={busy !== null}
         onClick={() => call('approve-for-comparison')}
-        className="rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50"
+        icon="CheckCheck"
+        className="!bg-emerald-600 hover:!bg-emerald-700 !bg-none"
       >
         อนุมัติเข้ารอบเปรียบเทียบ
-      </button>,
+      </Button>,
     );
   }
 
@@ -107,45 +114,53 @@ export function PrActions({ pr, isOwner, isProcurement }: Props) {
 
   return (
     <>
-      <div className="sticky bottom-0 mt-8 -mx-6 border-t border-slate-200 bg-white px-6 py-3 shadow-[0_-2px_4px_rgba(0,0,0,0.04)]">
-        {error && <p className="mb-2 text-sm text-red-600">{error}</p>}
+      <div className="sticky bottom-4 mt-8 rounded-2xl bg-white/90 dark:bg-ink-800/90 backdrop-blur-md border border-ink-100 dark:border-white/5 shadow-pop px-5 py-3">
+        {error && (
+          <p className="mb-2 rounded-lg bg-rose-50 dark:bg-rose-900/30 px-3 py-1.5 text-sm text-rose-700 dark:text-rose-200">
+            {error}
+          </p>
+        )}
         <div className="flex flex-wrap items-center justify-end gap-2">{buttons}</div>
       </div>
 
       {showReturn && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
-          <div className="w-full max-w-md rounded-md bg-white p-6 shadow-xl">
-            <h3 className="text-base font-semibold">ส่งกลับเพื่อแก้ไข</h3>
-            <p className="mt-1 text-xs text-slate-500">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
+          <Card className="w-full max-w-md p-6">
+            <h3 className="text-base font-semibold text-ink-900 dark:text-white">
+              ส่งกลับเพื่อแก้ไข
+            </h3>
+            <p className="mt-1 text-xs text-ink-500 dark:text-ink-300">
               ระบุเหตุผลที่ส่งกลับ — ผู้ขอจะเห็นเหตุผลนี้
             </p>
-            <textarea
+            <Textarea
               value={returnReason}
               onChange={(e) => setReturnReason(e.target.value)}
               rows={4}
-              className="mt-3 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              className="mt-3"
               placeholder="เช่น สเปกยังไม่ระบุชนิด ความเร็ว และการเชื่อมต่อ"
             />
             <div className="mt-4 flex justify-end gap-2">
-              <button
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={() => setShowReturn(false)}
-                className="rounded-md border border-slate-300 px-3 py-1.5 text-sm"
               >
                 ยกเลิก
-              </button>
-              <button
+              </Button>
+              <Button
+                size="sm"
                 disabled={!returnReason.trim() || busy !== null}
                 onClick={async () => {
                   await call('return', { reason: returnReason.trim() });
                   setShowReturn(false);
                   setReturnReason('');
                 }}
-                className="rounded-md bg-red-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
+                className="!bg-rose-600 hover:!bg-rose-700 !bg-none"
               >
                 ส่งกลับ
-              </button>
+              </Button>
             </div>
-          </div>
+          </Card>
         </div>
       )}
     </>

@@ -6,6 +6,12 @@ import { requireUser } from '@/lib/auth';
 import { apiFetch, ApiError } from '@/lib/api';
 import { AppShell } from '@/components/app-shell';
 import { type PurchaseRequestStatus } from '@ai-market/shared';
+import { PageHeader, SectionTitle } from '@/components/ui/page-header';
+import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { StatusBadge } from '@/components/ui/badge';
+import { Icon } from '@/components/ui/icon';
+import { fmtNum } from '@/components/ui/format';
 import { PrActions } from './actions';
 import { RiskFlagsPanel } from './risk-flags';
 
@@ -64,6 +70,22 @@ interface PrDetail {
   }>;
 }
 
+const STATUS_TO_BADGE: Record<PurchaseRequestStatus, string> = {
+  DRAFT: 'draft',
+  SUBMITTED: 'submitted',
+  REVIEWING: 'reviewing',
+  RETURNED: 'returned',
+  APPROVED_FOR_COMPARISON: 'approved',
+  IN_COMPARISON: 'reviewing',
+  PENDING_APPROVAL: 'reviewing',
+  APPROVED: 'approved',
+  REJECTED: 'rejected',
+  IN_RECEIVING: 'reviewing',
+  RECEIVED: 'completed',
+  CLOSED: 'completed',
+  CANCELLED: 'rejected',
+};
+
 export default async function RequestDetailPage({
   params,
 }: {
@@ -92,177 +114,194 @@ export default async function RequestDetailPage({
     user.roles.includes('DIRECTOR') ||
     user.roles.includes('ADMIN');
 
+  const totalEst = pr.items.reduce((sum, it) => {
+    const q = Number(it.quantity);
+    const p = it.unitPriceEst != null ? Number(it.unitPriceEst) : 0;
+    return sum + q * p;
+  }, 0);
+
   return (
     <AppShell user={user}>
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <p className="font-mono text-xs text-slate-500">{pr.docNo ?? '— (ยังไม่ได้ส่งเรื่อง)'}</p>
-          <h1 className="text-xl font-semibold text-slate-800">{pr.title}</h1>
-          <p className="mt-1 text-xs text-slate-500">
-            ผู้ขอ: {pr.requester.fullName} · สร้าง{' '}
-            {new Date(pr.createdAt).toLocaleString('th-TH')}
-            {pr.submittedAt && (
-              <> · ส่งเรื่อง {new Date(pr.submittedAt).toLocaleString('th-TH')}</>
-            )}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <span
-            className={`rounded-full px-3 py-1 text-xs font-medium ${statusBadgeClass(pr.status)}`}
-          >
-            {tStatus(pr.status)}
-          </span>
-          {canEdit && (
-            <Link
-              href={`/requests/${pr.id}/edit` as never}
-              className="rounded-md border border-slate-300 px-3 py-1 text-xs text-slate-700 hover:bg-slate-100"
-            >
-              แก้ไข
-            </Link>
-          )}
-          {canViewAudit && (
-            <Link
-              href={`/audit-logs?entityType=PurchaseRequest&entityId=${pr.id}` as never}
-              className="rounded-md border border-slate-300 px-3 py-1 text-xs text-slate-700 hover:bg-slate-100"
-            >
-              ประวัติ
-            </Link>
-          )}
-          <a
-            href={`${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3100/api/v1'}/purchase-requests/${pr.id}/export.xlsx`}
-            className="rounded-md border border-slate-300 px-3 py-1 text-xs text-slate-700 hover:bg-slate-100"
-          >
-            Excel
-          </a>
-          <Link
-            href={`/requests/${pr.id}/print` as never}
-            target="_blank"
-            className="rounded-md border border-slate-300 px-3 py-1 text-xs text-slate-700 hover:bg-slate-100"
-          >
-            พิมพ์ / PDF
-          </Link>
-        </div>
-      </div>
+      <div className="fade-up">
+        <PageHeader
+          eyebrow={`คำขอซื้อ · ${pr.docNo ?? 'ยังไม่ได้ส่งเรื่อง'}`}
+          title={pr.title}
+          subtitle={
+            <>
+              ผู้ขอ: {pr.requester.fullName} · สร้าง {new Date(pr.createdAt).toLocaleString('th-TH')}
+              {pr.submittedAt && (
+                <> · ส่งเรื่อง {new Date(pr.submittedAt).toLocaleString('th-TH')}</>
+              )}
+            </>
+          }
+          actions={
+            <>
+              <StatusBadge status={STATUS_TO_BADGE[pr.status]!} label={tStatus(pr.status)} />
+              {canEdit && (
+                <Link href={`/requests/${pr.id}/edit` as never}>
+                  <Button variant="outline" size="sm" icon="Pencil">
+                    แก้ไข
+                  </Button>
+                </Link>
+              )}
+              {canViewAudit && (
+                <Link
+                  href={
+                    `/audit-logs?entityType=PurchaseRequest&entityId=${pr.id}` as never
+                  }
+                >
+                  <Button variant="outline" size="sm" icon="History">
+                    ประวัติ
+                  </Button>
+                </Link>
+              )}
+              <a
+                href={`${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3100/api/v1'}/purchase-requests/${pr.id}/export.xlsx`}
+              >
+                <Button variant="outline" size="sm" icon="FileSpreadsheet">
+                  Excel
+                </Button>
+              </a>
+              <Link href={`/requests/${pr.id}/print` as never} target="_blank">
+                <Button variant="outline" size="sm" icon="Printer">
+                  พิมพ์ / PDF
+                </Button>
+              </Link>
+            </>
+          }
+        />
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-3">
-        <div className="space-y-6 lg:col-span-2">
-          <section className="rounded-md border border-slate-200 bg-white p-6 shadow-sm">
-            <h2 className="text-sm font-semibold text-slate-700">เหตุผลความจำเป็น</h2>
-            <p className="mt-2 whitespace-pre-wrap text-sm text-slate-800">{pr.reason}</p>
-          </section>
+        <div className="grid gap-5 lg:grid-cols-3">
+          <div className="space-y-5 lg:col-span-2">
+            <Card className="p-5">
+              <SectionTitle
+                icon={<Icon name="MessageSquare" className="w-3.5 h-3.5" />}
+                title="เหตุผลความจำเป็น"
+              />
+              <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-ink-700 dark:text-ink-100">
+                {pr.reason}
+              </p>
+            </Card>
 
-          <section className="rounded-md border border-slate-200 bg-white p-6 shadow-sm">
-            <h2 className="text-sm font-semibold text-slate-700">โครงการ / แหล่งงบ</h2>
-            <dl className="mt-3 grid gap-3 text-sm sm:grid-cols-2">
-              <div>
-                <dt className="text-xs text-slate-500">โครงการ</dt>
-                <dd className="mt-0.5 text-slate-800">
-                  {pr.project ? (
-                    <>
-                      {pr.project.code && (
-                        <span className="font-mono text-xs text-slate-500">
-                          [{pr.project.code}]{' '}
+            <Card className="p-5">
+              <SectionTitle
+                icon={<Icon name="Wallet" className="w-3.5 h-3.5" />}
+                title="โครงการ / แหล่งงบ"
+                sub="Phase 1 placeholder · Phase 2 จะเพิ่มข้อมูลงบคงเหลือ"
+              />
+              <dl className="mt-3 grid gap-4 text-sm sm:grid-cols-2">
+                <div>
+                  <dt className="text-xs text-ink-500 dark:text-ink-300">โครงการ</dt>
+                  <dd className="mt-0.5 text-ink-900 dark:text-white">
+                    {pr.project ? (
+                      <>
+                        {pr.project.code && (
+                          <span className="font-mono text-xs text-ink-400 dark:text-ink-300">
+                            [{pr.project.code}]{' '}
+                          </span>
+                        )}
+                        {pr.project.name}
+                        <span className="ml-1 text-xs text-ink-400 dark:text-ink-300">
+                          (ปี {pr.project.fiscalYear})
                         </span>
-                      )}
-                      {pr.project.name}
-                      <span className="ml-1 text-xs text-slate-500">
-                        (ปี {pr.project.fiscalYear})
-                      </span>
-                    </>
-                  ) : (
-                    <span className="text-slate-400">— ยังไม่ระบุ —</span>
-                  )}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-xs text-slate-500">แหล่งงบ</dt>
-                <dd className="mt-0.5 text-slate-800">
-                  {pr.budgetSource ? (
-                    <>
-                      {pr.budgetSource.code && (
-                        <span className="font-mono text-xs text-slate-500">
-                          [{pr.budgetSource.code}]{' '}
+                      </>
+                    ) : (
+                      <span className="text-ink-400 dark:text-ink-300">— ยังไม่ระบุ —</span>
+                    )}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-ink-500 dark:text-ink-300">แหล่งงบ</dt>
+                  <dd className="mt-0.5 text-ink-900 dark:text-white">
+                    {pr.budgetSource ? (
+                      <>
+                        {pr.budgetSource.code && (
+                          <span className="font-mono text-xs text-ink-400 dark:text-ink-300">
+                            [{pr.budgetSource.code}]{' '}
+                          </span>
+                        )}
+                        {pr.budgetSource.name}
+                        <span className="ml-1 text-xs text-ink-400 dark:text-ink-300">
+                          · {pr.budgetSource.type}
                         </span>
-                      )}
-                      {pr.budgetSource.name}
-                      <span className="ml-1 text-xs text-slate-500">
-                        · {pr.budgetSource.type} (ปี {pr.budgetSource.fiscalYear})
-                      </span>
-                    </>
-                  ) : (
-                    <span className="text-slate-400">— ยังไม่ระบุ —</span>
-                  )}
-                </dd>
-              </div>
-            </dl>
-          </section>
+                      </>
+                    ) : (
+                      <span className="text-ink-400 dark:text-ink-300">— ยังไม่ระบุ —</span>
+                    )}
+                  </dd>
+                </div>
+              </dl>
+            </Card>
 
-          <section className="overflow-hidden rounded-md border border-slate-200 bg-white shadow-sm">
-            <h2 className="border-b border-slate-200 px-6 py-3 text-sm font-semibold text-slate-700">
-              รายการพัสดุ ({pr.items.length})
-            </h2>
-            <table className="w-full text-sm">
-              <thead className="bg-slate-50 text-left text-xs uppercase text-slate-500">
-                <tr>
-                  <th className="w-10 px-4 py-2">#</th>
-                  <th className="px-4 py-2">ชื่อ</th>
-                  <th className="w-20 px-4 py-2">จำนวน</th>
-                  <th className="w-20 px-4 py-2">หน่วย</th>
-                  <th className="w-28 px-4 py-2">ประมาณราคา</th>
-                </tr>
-              </thead>
-              <tbody>
-                {pr.items.map((it) => (
-                  <tr key={it.id} className="border-t border-slate-100 align-top">
-                    <td className="px-4 py-3 text-xs text-slate-500">{it.ordinal}</td>
-                    <td className="px-4 py-3">
-                      <div className="font-medium text-slate-800">{it.name}</div>
-                      {it.notes && <div className="text-xs text-slate-500">{it.notes}</div>}
-                      {it.specifications.length > 0 && (
-                        <ul className="mt-1 list-disc space-y-0.5 pl-5 text-xs text-slate-600">
-                          {it.specifications.map((s) => (
-                            <li key={s.id}>
-                              <span className="font-medium">{s.key}:</span> {s.value}
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-slate-700">{Number(it.quantity)}</td>
-                    <td className="px-4 py-3 text-slate-700">{it.unit}</td>
-                    <td className="px-4 py-3 text-slate-700">
-                      {it.unitPriceEst ? Number(it.unitPriceEst).toLocaleString('th-TH') : '—'}
-                    </td>
+            <Card className="overflow-hidden">
+              <SectionTitle
+                icon={<Icon name="Package" className="w-3.5 h-3.5" />}
+                title={`รายการพัสดุ (${pr.items.length})`}
+                sub={
+                  totalEst > 0
+                    ? `ประมาณการรวม ${fmtNum(totalEst)} บาท`
+                    : 'ยังไม่ได้ระบุราคาประมาณ'
+                }
+              />
+              <table className="w-full text-sm">
+                <thead className="bg-ink-50/60 dark:bg-ink-900/40 text-left text-[11px] uppercase tracking-wider text-ink-400 dark:text-ink-300">
+                  <tr>
+                    <th className="w-10 px-4 py-2 font-medium">#</th>
+                    <th className="px-4 py-2 font-medium">รายการ</th>
+                    <th className="w-20 px-4 py-2 font-medium text-right">จำนวน</th>
+                    <th className="w-20 px-4 py-2 font-medium">หน่วย</th>
+                    <th className="w-32 px-4 py-2 font-medium text-right">ราคาประมาณ</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </section>
+                </thead>
+                <tbody className="divide-y divide-ink-100 dark:divide-white/5">
+                  {pr.items.map((it) => (
+                    <tr key={it.id} className="align-top">
+                      <td className="px-4 py-3 text-xs text-ink-400 dark:text-ink-300 tabular-nums">
+                        {it.ordinal}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="font-medium text-ink-900 dark:text-white">{it.name}</div>
+                        {it.notes && (
+                          <div className="text-xs text-ink-400 dark:text-ink-300">{it.notes}</div>
+                        )}
+                        {it.specifications.length > 0 && (
+                          <ul className="mt-1 list-disc space-y-0.5 pl-5 text-xs text-ink-600 dark:text-ink-200">
+                            {it.specifications.map((s) => (
+                              <li key={s.id}>
+                                <span className="font-medium">{s.key}:</span> {s.value}
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 tabular-nums text-right text-ink-700 dark:text-ink-100">
+                        {Number(it.quantity)}
+                      </td>
+                      <td className="px-4 py-3 text-ink-700 dark:text-ink-100">{it.unit}</td>
+                      <td className="px-4 py-3 tabular-nums text-right text-ink-700 dark:text-ink-100">
+                        {it.unitPriceEst
+                          ? Number(it.unitPriceEst).toLocaleString('th-TH')
+                          : '—'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </Card>
+          </div>
+
+          <aside className="space-y-5">
+            <RiskFlagsPanel
+              prId={pr.id}
+              flags={pr.riskFlags}
+              canDismiss={isProcurement}
+              canRecheck={isProcurement}
+            />
+          </aside>
         </div>
 
-        <aside className="space-y-6">
-          <RiskFlagsPanel
-            prId={pr.id}
-            flags={pr.riskFlags}
-            canDismiss={isProcurement}
-            canRecheck={isProcurement}
-          />
-        </aside>
+        <PrActions pr={pr} isOwner={isOwner} isProcurement={isProcurement} />
       </div>
-
-      <PrActions pr={pr} isOwner={isOwner} isProcurement={isProcurement} />
     </AppShell>
   );
-}
-
-function statusBadgeClass(status: PurchaseRequestStatus): string {
-  if (status === 'DRAFT') return 'bg-slate-100 text-slate-700';
-  if (status === 'SUBMITTED') return 'bg-blue-100 text-blue-700';
-  if (status === 'REVIEWING') return 'bg-amber-100 text-amber-700';
-  if (status === 'RETURNED') return 'bg-red-100 text-red-700';
-  if (status === 'APPROVED_FOR_COMPARISON' || status === 'APPROVED' || status === 'CLOSED') {
-    return 'bg-green-100 text-green-700';
-  }
-  if (status === 'REJECTED' || status === 'CANCELLED') return 'bg-slate-200 text-slate-600';
-  return 'bg-slate-100 text-slate-700';
 }

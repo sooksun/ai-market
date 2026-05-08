@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { Button } from '@/components/ui/button';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3100/api/v1';
 
@@ -29,13 +30,16 @@ export function DeleteRuleButton({ id, ruleKey }: { id: string; ruleKey: string 
   }
 
   return (
-    <button
+    <Button
       type="button"
       onClick={handleDelete}
       disabled={busy}
-      className="rounded-md border border-red-300 px-2 py-1 text-xs text-red-700 hover:bg-red-50 disabled:opacity-50"
+      variant="outline"
+      size="sm"
+      icon="Trash2"
+      className="text-rose-700 dark:text-rose-300 ring-rose-300/60 dark:ring-rose-700/40 hover:bg-rose-50 dark:hover:bg-rose-900/30"
     >
       {busy ? 'กำลังลบ...' : 'ลบ'}
-    </button>
+    </Button>
   );
 }

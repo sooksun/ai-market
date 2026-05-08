@@ -2,6 +2,9 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { Card } from '@/components/ui/card';
+import { Field, TextInput, Textarea } from '@/components/ui/form';
+import { Button } from '@/components/ui/button';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3100/api/v1';
 
@@ -28,9 +31,7 @@ export function RuleForm({ mode, id, initial }: RuleFormProps) {
   const router = useRouter();
   const [key, setKey] = useState(initial?.key ?? '');
   const [type, setType] = useState(initial?.type ?? 'list');
-  const [valueJson, setValueJson] = useState(
-    JSON.stringify(initial?.value ?? {}, null, 2),
-  );
+  const [valueJson, setValueJson] = useState(JSON.stringify(initial?.value ?? {}, null, 2));
   const [description, setDescription] = useState(initial?.description ?? '');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -90,79 +91,74 @@ export function RuleForm({ mode, id, initial }: RuleFormProps) {
   const hint = TYPE_HINTS[type];
 
   return (
-    <form onSubmit={onSubmit} className="space-y-5 rounded-md border border-slate-200 bg-white p-6 shadow-sm">
-      <label className="block text-sm">
-        Key
-        <input
-          value={key}
-          onChange={(e) => setKey(e.target.value)}
+    <Card className="p-6">
+      <form onSubmit={onSubmit} className="space-y-5">
+        <Field
+          label="Key"
           required
-          disabled={mode === 'edit'}
-          placeholder="เช่น procurement_thresholds"
-          className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 font-mono text-sm disabled:bg-slate-50 disabled:text-slate-500"
-        />
-        <span className="mt-1 block text-xs text-slate-500">
-          ตัวพิมพ์เล็ก ขีดล่าง ตัวเลข เริ่มด้วยตัวอักษร · {mode === 'edit' && 'แก้ key หลังสร้างไม่ได้'}
-        </span>
-      </label>
+          hint={mode === 'edit' ? 'แก้ key หลังสร้างไม่ได้' : 'ตัวพิมพ์เล็ก ขีดล่าง ตัวเลข เริ่มด้วยตัวอักษร'}
+        >
+          <TextInput
+            value={key}
+            onChange={(e) => setKey(e.target.value)}
+            required
+            disabled={mode === 'edit'}
+            placeholder="เช่น procurement_thresholds"
+            className="font-mono disabled:opacity-60 disabled:cursor-not-allowed"
+          />
+        </Field>
 
-      <label className="block text-sm">
-        Type (label)
-        <input
-          value={type}
-          onChange={(e) => setType(e.target.value)}
-          required
-          placeholder="เช่น list / thresholds / checklist / number"
-          className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 font-mono text-sm"
-        />
-      </label>
+        <Field label="Type (label)" required>
+          <TextInput
+            value={type}
+            onChange={(e) => setType(e.target.value)}
+            required
+            placeholder="เช่น list / thresholds / checklist / number"
+            className="font-mono"
+          />
+        </Field>
 
-      <label className="block text-sm">
-        Value (JSON)
-        <textarea
-          value={valueJson}
-          onChange={(e) => setValueJson(e.target.value)}
-          rows={10}
+        <Field
+          label="Value (JSON)"
           required
-          className="mt-1 w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2 font-mono text-xs"
-        />
-        {hint && (
-          <span className="mt-1 block text-xs text-slate-500">
-            ตัวอย่าง type "{type}": <code>{hint}</code>
-          </span>
+          hint={hint ? `ตัวอย่าง type "${type}": ${hint}` : undefined}
+        >
+          <Textarea
+            value={valueJson}
+            onChange={(e) => setValueJson(e.target.value)}
+            rows={10}
+            required
+            className="font-mono text-xs bg-ink-50 dark:bg-ink-900/40"
+          />
+        </Field>
+
+        <Field label="คำอธิบาย">
+          <TextInput
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="คำอธิบายสั้น ๆ สำหรับเพื่อนร่วมงาน"
+          />
+        </Field>
+
+        {error && (
+          <div className="rounded-2xl bg-rose-50 dark:bg-rose-900/30 ring-1 ring-rose-200/60 dark:ring-rose-700/40 px-4 py-3 text-sm text-rose-700 dark:text-rose-200">
+            {error}
+          </div>
         )}
-      </label>
 
-      <label className="block text-sm">
-        คำอธิบาย
-        <input
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          placeholder="คำอธิบายสั้น ๆ สำหรับเพื่อนร่วมงาน"
-          className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-        />
-      </label>
-
-      {error && (
-        <div className="rounded-md bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
-      )}
-
-      <div className="flex justify-end gap-3">
-        <button
-          type="button"
-          onClick={() => router.back()}
-          className="rounded-md border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-100"
-        >
-          ยกเลิก
-        </button>
-        <button
-          type="submit"
-          disabled={submitting}
-          className="rounded-md bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600 disabled:opacity-50"
-        >
-          {submitting ? 'กำลังบันทึก...' : mode === 'edit' ? 'บันทึกการแก้ไข' : 'สร้าง rule'}
-        </button>
-      </div>
-    </form>
+        <div className="flex justify-end gap-3 pt-2">
+          <Button type="button" variant="ghost" onClick={() => router.back()}>
+            ยกเลิก
+          </Button>
+          <Button type="submit" disabled={submitting} icon="Save">
+            {submitting
+              ? 'กำลังบันทึก...'
+              : mode === 'edit'
+                ? 'บันทึกการแก้ไข'
+                : 'สร้าง rule'}
+          </Button>
+        </div>
+      </form>
+    </Card>
   );
 }

@@ -3,6 +3,7 @@ import { requireUser } from '@/lib/auth';
 import { apiFetch } from '@/lib/api';
 import { AppShell } from '@/components/app-shell';
 import { PurchaseRequestForm } from '@/components/purchase-request-form';
+import { PageHeader } from '@/components/ui/page-header';
 import type { BudgetSourceSummary, ProjectSummary } from '@ai-market/shared';
 
 export default async function NewRequestPage() {
@@ -17,11 +18,12 @@ export default async function NewRequestPage() {
 
   return (
     <AppShell user={user}>
-      <h1 className="text-xl font-semibold text-slate-800">สร้างคำขอซื้อ</h1>
-      <p className="text-sm text-slate-500">
-        กรอกรายละเอียดและรายการพัสดุ — ใช้ AI ช่วยแยกรายการจากข้อความได้
-      </p>
-      <div className="mt-6">
+      <div className="fade-up">
+        <PageHeader
+          eyebrow="คำขอซื้อใหม่"
+          title="สร้างคำขอซื้อ/จ้าง"
+          subtitle="กรอกข้อมูลให้ครบถ้วน · AI ช่วยแยกรายการจากข้อความหรือไฟล์ Excel/CSV ได้"
+        />
         <PurchaseRequestForm
           mode="create"
           projects={projects}
