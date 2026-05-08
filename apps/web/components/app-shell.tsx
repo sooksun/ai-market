@@ -1,24 +1,106 @@
-import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 import type { CurrentUser, Role } from '@ai-market/shared';
+import { AppShellClient, type NavItemResolved } from './app-shell-client';
 
-interface NavItem {
+interface NavDef {
   href: string;
   labelKey: string;
+  icon: string;
+  group: 'main' | 'ops' | 'audit';
   rolesAny?: Role[];
+  ai?: boolean;
+  /** Hidden until backend lands — Phase 2+ */
+  comingSoon?: boolean;
 }
 
-const NAV: NavItem[] = [
-  { href: '/dashboard', labelKey: 'dashboard', rolesAny: ['DIRECTOR', 'ADMIN'] },
-  { href: '/requests', labelKey: 'requests' },
-  { href: '/requests/new', labelKey: 'newRequest' },
-  { href: '/inbox', labelKey: 'inbox', rolesAny: ['PROCUREMENT', 'DIRECTOR', 'ADMIN'] },
-  { href: '/audit-logs', labelKey: 'auditLogs', rolesAny: ['AUDITOR', 'DIRECTOR', 'ADMIN'] },
-  { href: '/admin/rule-configs', labelKey: 'admin', rolesAny: ['ADMIN'] },
-  { href: '/me', labelKey: 'profile' },
+const NAV: NavDef[] = [
+  // main
+  {
+    href: '/dashboard',
+    labelKey: 'dashboard',
+    icon: 'layout-dashboard',
+    group: 'main',
+    rolesAny: ['DIRECTOR', 'ADMIN'],
+  },
+  {
+    href: '/inbox',
+    labelKey: 'officer',
+    icon: 'briefcase',
+    group: 'main',
+    rolesAny: ['PROCUREMENT', 'DIRECTOR', 'ADMIN'],
+  },
+  // ops
+  { href: '/requests', labelKey: 'requests', icon: 'file-stack', group: 'ops' },
+  {
+    href: '/budget',
+    labelKey: 'budget',
+    icon: 'wallet',
+    group: 'ops',
+    comingSoon: true,
+  },
+  {
+    href: '/spec',
+    labelKey: 'spec',
+    icon: 'sparkles',
+    group: 'ops',
+    ai: true,
+    comingSoon: true,
+  },
+  {
+    href: '/compare',
+    labelKey: 'compare',
+    icon: 'scale',
+    group: 'ops',
+    comingSoon: true,
+  },
+  {
+    href: '/approval',
+    labelKey: 'approval',
+    icon: 'user-check',
+    group: 'ops',
+    comingSoon: true,
+  },
+  {
+    href: '/receiving',
+    labelKey: 'receiving',
+    icon: 'package-check',
+    group: 'ops',
+    comingSoon: true,
+  },
+  {
+    href: '/inventory',
+    labelKey: 'inventory',
+    icon: 'boxes',
+    group: 'ops',
+    comingSoon: true,
+  },
+  {
+    href: '/finance',
+    labelKey: 'finance',
+    icon: 'banknote',
+    group: 'ops',
+    comingSoon: true,
+  },
+  // audit & system
+  {
+    href: '/audit-logs',
+    labelKey: 'auditLogs',
+    icon: 'shield-check',
+    group: 'audit',
+    rolesAny: ['AUDITOR', 'DIRECTOR', 'ADMIN'],
+  },
+  {
+    href: '/admin/rule-configs',
+    labelKey: 'admin',
+    icon: 'settings',
+    group: 'audit',
+    rolesAny: ['ADMIN'],
+  },
+  { href: '/me', labelKey: 'profile', icon: 'user', group: 'audit' },
 ];
 
-function visibleFor(user: CurrentUser, item: NavItem): boolean {
+function visibleFor(user: CurrentUser, item: NavDef): boolean {
+  if (item.comingSoon) return false;
   if (!item.rolesAny) return true;
   return user.roles.some((r) => item.rolesAny!.includes(r));
 }
@@ -32,49 +114,40 @@ export async function AppShell({
 }) {
   const tNav = await getTranslations('nav');
   const tRole = await getTranslations('role');
-  const visibleNav = NAV.filter((n) => visibleFor(user, n));
+
+  const navItems: NavItemResolved[] = NAV.filter((n) => visibleFor(user, n)).map((n) => ({
+    href: n.href,
+    label: tNav(n.labelKey),
+    icon: n.icon,
+    group: n.group,
+    ai: n.ai,
+  }));
+
+  const groupTitles = {
+    main: tNav('groupMain'),
+    ops: tNav('groupOps'),
+    audit: tNav('groupAudit'),
+  };
+
   return (
-    <div className="flex min-h-screen">
-      <aside className="hidden w-60 border-r border-slate-200 bg-white md:block">
-        <div className="border-b border-slate-200 px-4 py-4">
-          <p className="text-base font-semibold text-brand-500">{tNav('appName')}</p>
-          <p className="text-xs text-slate-500">{tNav('appTagline')}</p>
-        </div>
-        <nav className="px-2 py-4">
-          {visibleNav.map((n) => (
-            <Link
-              key={n.href}
-              href={n.href as never}
-              className="block rounded-md px-3 py-2 text-sm text-slate-700 hover:bg-slate-100"
-            >
-              {tNav(n.labelKey)}
-            </Link>
-          ))}
-        </nav>
-      </aside>
-      <div className="flex min-h-screen flex-1 flex-col">
-        <header className="flex items-center justify-between border-b border-slate-200 bg-white px-6 py-3">
-          <div className="text-sm text-slate-500">{user.fullName}</div>
-          <div className="flex items-center gap-3">
-            <div className="flex flex-wrap gap-1">
-              {user.roles.map((r) => (
-                <span
-                  key={r}
-                  className="rounded-full bg-brand-50 px-2 py-0.5 text-xs text-brand-700"
-                >
-                  {tRole(r)}
-                </span>
-              ))}
-            </div>
-            <form action="/api/logout" method="post">
-              <button className="rounded-md border border-slate-300 px-3 py-1 text-xs text-slate-700 hover:bg-slate-100">
-                {tNav('logout')}
-              </button>
-            </form>
-          </div>
-        </header>
-        <main className="flex-1 px-6 py-6">{children}</main>
-      </div>
-    </div>
+    <AppShellClient
+      navItems={navItems}
+      groupTitles={groupTitles}
+      brand={{ name: tNav('appName'), tagline: tNav('appTagline') }}
+      user={{
+        id: user.id,
+        fullName: user.fullName,
+        schoolId: user.schoolId,
+        roleLabels: user.roles.map((r) => tRole(r)),
+        primaryRoleLabel: tRole(user.roles[0] ?? 'REQUESTER'),
+      }}
+      copilotComingSoon={tNav('copilotComingSoon')}
+      searchPlaceholder={tNav('searchPlaceholder')}
+      logoutLabel={tNav('logout')}
+      newRequestLabel={tNav('newRequest')}
+      copilotLabel={tNav('copilot')}
+    >
+      {children}
+    </AppShellClient>
   );
 }

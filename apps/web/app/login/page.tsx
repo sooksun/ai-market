@@ -52,8 +52,10 @@ function LoginForm() {
         onSubmit={onSubmit}
         className="w-full max-w-sm rounded-md border border-slate-200 bg-white p-8 shadow-sm"
       >
-        <h1 className="text-2xl font-bold text-brand-500">AI Market</h1>
-        <p className="mt-1 text-sm text-slate-500">เข้าสู่ระบบผู้ช่วยพัสดุโรงเรียน</p>
+        <h1 className="text-2xl font-bold grad-text">
+          FinProcure <span className="text-brand-600">AI</span>
+        </h1>
+        <p className="mt-1 text-sm text-ink-400">การเงินพัสดุอัจฉริยะ · เข้าสู่ระบบ</p>
 
         <label className="mt-6 block text-sm font-medium text-slate-700">
           อีเมล

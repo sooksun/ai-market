@@ -44,3 +44,6 @@ coverage/
 # uploads (local dev)
 storage/
 uploads/
+
+# Claude Design handoff (reference only, re-extract from zip when needed)
+design-handoff/
