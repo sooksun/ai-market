@@ -12,6 +12,7 @@ import {
 } from '@ai-market/shared';
 import { PrismaService } from '../prisma/prisma.service';
 import { CloudinessService } from '../ai/services/cloudiness.service';
+import { BudgetsService } from '../budgets/budgets.service';
 import type { AuthenticatedUser } from '../common/decorators/current-user.decorator';
 
 const TRANSITIONS: Record<PrStatusType, PrStatusType[]> = {
@@ -54,6 +55,7 @@ export class PrService {
   constructor(
     private prisma: PrismaService,
     private cloudiness: CloudinessService,
+    private budgets: BudgetsService,
   ) {}
 
   async list(user: AuthenticatedUser, q: ListQuery) {
@@ -222,6 +224,28 @@ export class PrService {
       },
     });
 
+    // Soft-hold budget if PR has project + source linked.
+    if (pr.projectId && pr.budgetSourceId) {
+      const total = pr.items.reduce((sum, it) => {
+        const q = new Prisma.Decimal(it.quantity);
+        const p = it.unitPriceEst ?? new Prisma.Decimal(0);
+        return sum.plus(q.times(p));
+      }, new Prisma.Decimal(0));
+      try {
+        await this.budgets.holdForPr(
+          pr.schoolId,
+          pr.id,
+          pr.projectId,
+          pr.budgetSourceId,
+          total,
+          user.id,
+        );
+      } catch (err) {
+        // Don't block submit if hold fails — log and continue.
+        console.warn(`[pr.submit] budget hold failed for PR ${pr.id}:`, err);
+      }
+    }
+
     // Fire-and-forget AI cloudiness check (does not block submit response).
     this.cloudiness.triggerBackground(id, user);
 
@@ -264,7 +288,7 @@ export class PrService {
     this.requireRole(user, ['PROCUREMENT', 'ADMIN']);
     const pr = await this.getById(user, id);
     assertTransition(pr.status, 'RETURNED');
-    return this.prisma.$transaction(async (tx) => {
+    const result = await this.prisma.$transaction(async (tx) => {
       await tx.aiRiskFlag.create({
         data: {
           purchaseRequestId: id,
@@ -279,6 +303,13 @@ export class PrService {
         data: { status: PurchaseRequestStatus.RETURNED },
       });
     });
+    // Release any HOLD on this PR.
+    try {
+      await this.budgets.releaseForPr(id, user.id);
+    } catch (err) {
+      console.warn(`[pr.return] budget release failed for PR ${id}:`, err);
+    }
+    return result;
   }
 
   async approveForComparison(user: AuthenticatedUser, id: string) {
@@ -302,10 +333,16 @@ export class PrService {
         message: 'ถอนได้เฉพาะ DRAFT/SUBMITTED',
       });
     }
-    return this.prisma.purchaseRequest.update({
+    const result = await this.prisma.purchaseRequest.update({
       where: { id },
       data: { status: PurchaseRequestStatus.CANCELLED },
     });
+    try {
+      await this.budgets.releaseForPr(id, user.id);
+    } catch (err) {
+      console.warn(`[pr.withdraw] budget release failed for PR ${id}:`, err);
+    }
+    return result;
   }
 
   private async assertProjectAndBudgetBelongToSchool(

@@ -1,0 +1,131 @@
+'use client';
+
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { Card } from '@/components/ui/card';
+import { Field, TextInput, Select } from '@/components/ui/form';
+import { Button } from '@/components/ui/button';
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3100/api/v1';
+
+export interface ProjectFormProps {
+  mode: 'create' | 'edit';
+  id?: string;
+  initial?: {
+    code: string | null;
+    name: string;
+    fiscalYear: number;
+    active: boolean;
+  };
+}
+
+const CURRENT_BE = new Date().getFullYear() + 543;
+const YEARS = [CURRENT_BE - 1, CURRENT_BE, CURRENT_BE + 1];
+
+export function ProjectForm({ mode, id, initial }: ProjectFormProps) {
+  const router = useRouter();
+  const [code, setCode] = useState(initial?.code ?? '');
+  const [name, setName] = useState(initial?.name ?? '');
+  const [fiscalYear, setFiscalYear] = useState(initial?.fiscalYear ?? CURRENT_BE);
+  const [active, setActive] = useState(initial?.active ?? true);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function onSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setSubmitting(true);
+    try {
+      const url =
+        mode === 'edit' && id ? `${API_URL}/projects/${id}` : `${API_URL}/projects`;
+      const method = mode === 'edit' ? 'PATCH' : 'POST';
+      const res = await fetch(url, {
+        method,
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          code: code || null,
+          name,
+          fiscalYear,
+          active,
+        }),
+      });
+      const json = await res.json().catch(() => null);
+      if (!res.ok) {
+        setError(json?.error?.message ?? `บันทึกไม่สำเร็จ (${res.status})`);
+        return;
+      }
+      router.push('/admin/projects');
+      router.refresh();
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <Card className="p-6">
+      <form onSubmit={onSubmit} className="space-y-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Field label="รหัสโครงการ (code)" hint="เช่น P-IT, P-LIB">
+            <TextInput
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
+              placeholder="P-IT"
+              className="font-mono"
+            />
+          </Field>
+          <Field label="ปีงบประมาณ (พ.ศ.)" required>
+            <Select
+              value={fiscalYear}
+              onChange={(e) => setFiscalYear(Number(e.target.value))}
+            >
+              {YEARS.map((y) => (
+                <option key={y} value={y}>
+                  {y}
+                </option>
+              ))}
+            </Select>
+          </Field>
+        </div>
+
+        <Field label="ชื่อโครงการ" required>
+          <TextInput
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            required
+            placeholder="เช่น พัฒนาระบบ IT โรงเรียน"
+          />
+        </Field>
+
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={active}
+            onChange={(e) => setActive(e.target.checked)}
+            className="accent-brand-500 w-4 h-4"
+          />
+          <span className="text-ink-700 dark:text-ink-100">เปิดใช้งาน (active)</span>
+        </label>
+
+        {error && (
+          <div className="rounded-2xl bg-rose-50 dark:bg-rose-900/30 ring-1 ring-rose-200/60 dark:ring-rose-700/40 px-4 py-3 text-sm text-rose-700 dark:text-rose-200">
+            {error}
+          </div>
+        )}
+
+        <div className="flex justify-end gap-3 pt-2">
+          <Button type="button" variant="ghost" onClick={() => router.back()}>
+            ยกเลิก
+          </Button>
+          <Button type="submit" disabled={submitting} icon="Save">
+            {submitting
+              ? 'กำลังบันทึก...'
+              : mode === 'edit'
+                ? 'บันทึกการแก้ไข'
+                : 'สร้างโครงการ'}
+          </Button>
+        </div>
+      </form>
+    </Card>
+  );
+}

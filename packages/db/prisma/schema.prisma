@@ -118,6 +118,7 @@ model Project {
 
   school           School            @relation(fields: [schoolId], references: [id])
   purchaseRequests PurchaseRequest[]
+  budgets          Budget[]
 
   @@unique([schoolId, fiscalYear, code])
   @@index([schoolId, active])
@@ -139,10 +140,63 @@ model BudgetSource {
 
   school           School            @relation(fields: [schoolId], references: [id])
   purchaseRequests PurchaseRequest[]
+  budgets          Budget[]
 
   @@unique([schoolId, fiscalYear, code])
   @@index([schoolId, active])
   @@map("budget_sources")
+}
+
+// ─────────────────────────────────────────────
+// Phase 2 — Budget allocation + movements
+// ─────────────────────────────────────────────
+
+enum BudgetMovementType {
+  ALLOCATE
+  HOLD
+  RELEASE
+  COMMIT
+  SPEND
+  ADJUST
+}
+
+model Budget {
+  id             String   @id @default(cuid())
+  schoolId       String   @map("school_id")
+  projectId      String   @map("project_id")
+  budgetSourceId String   @map("budget_source_id")
+  fiscalYear     Int      @map("fiscal_year")
+  allocated      Decimal  @db.Decimal(15, 2)
+  notes          String?  @db.Text
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  project      Project          @relation(fields: [projectId], references: [id])
+  budgetSource BudgetSource     @relation(fields: [budgetSourceId], references: [id])
+  movements    BudgetMovement[]
+
+  @@unique([schoolId, fiscalYear, projectId, budgetSourceId])
+  @@index([schoolId, fiscalYear])
+  @@index([projectId])
+  @@map("budgets")
+}
+
+model BudgetMovement {
+  id          String             @id @default(cuid())
+  budgetId    String             @map("budget_id")
+  type        BudgetMovementType
+  amount      Decimal            @db.Decimal(15, 2)
+  refType     String?            @map("ref_type")
+  refId       String?            @map("ref_id")
+  note        String?            @db.Text
+  createdById String?            @map("created_by_id")
+  createdAt   DateTime           @default(now()) @map("created_at")
+
+  budget Budget @relation(fields: [budgetId], references: [id], onDelete: Cascade)
+
+  @@index([budgetId, createdAt])
+  @@index([refType, refId])
+  @@map("budget_movements")
 }
 
 model User {

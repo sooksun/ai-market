@@ -14,7 +14,8 @@ import { SectionTitle } from './ui/page-header';
 import { Confidence } from './ui/confidence';
 import { Icon } from './ui/icon';
 import { Tabs } from './ui/tabs';
-import { classNames } from './ui/format';
+import { BudgetBar } from './ui/budget-bar';
+import { fmtNum } from './ui/format';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3100/api/v1';
 
@@ -30,6 +31,21 @@ export interface ItemRow {
 
 const EMPTY_ROW: ItemRow = { name: '', quantity: 1, unit: 'ชิ้น' };
 
+export interface BudgetSummary {
+  id: string;
+  projectId: string;
+  budgetSourceId: string;
+  fiscalYear: number;
+  allocated: string;
+  balance: {
+    allocated: string;
+    held: string;
+    committed: string;
+    spent: string;
+    available: string;
+  };
+}
+
 export interface PurchaseRequestFormProps {
   mode: 'create' | 'edit';
   prId?: string;
@@ -42,6 +58,7 @@ export interface PurchaseRequestFormProps {
   };
   projects: ProjectSummary[];
   budgetSources: BudgetSourceSummary[];
+  budgets?: BudgetSummary[];
   redirectTo: string;
   submitLabel?: string;
 }
@@ -52,6 +69,7 @@ export function PurchaseRequestForm({
   initial,
   projects,
   budgetSources,
+  budgets = [],
   redirectTo,
   submitLabel,
 }: PurchaseRequestFormProps) {
@@ -224,6 +242,19 @@ export function PurchaseRequestForm({
               ))}
             </Select>
           </Field>
+
+          {projectId && budgetSourceId && (
+            <BudgetIndicator
+              projectId={projectId}
+              budgetSourceId={budgetSourceId}
+              budgets={budgets}
+              estTotal={items.reduce(
+                (sum, it) =>
+                  sum + Number(it.quantity || 0) * Number(it.unitPriceEst ?? 0),
+                0,
+              )}
+            />
+          )}
           <Field
             label="เหตุผลความจำเป็น"
             required
@@ -478,5 +509,89 @@ export function PurchaseRequestForm({
         </Button>
       </div>
     </form>
+  );
+}
+
+function BudgetIndicator({
+  projectId,
+  budgetSourceId,
+  budgets,
+  estTotal,
+}: {
+  projectId: string;
+  budgetSourceId: string;
+  budgets: BudgetSummary[];
+  estTotal: number;
+}) {
+  const match = budgets.find(
+    (b) => b.projectId === projectId && b.budgetSourceId === budgetSourceId,
+  );
+  if (!match) {
+    return (
+      <div className="md:col-span-2 rounded-2xl bg-amber-50 dark:bg-amber-900/30 ring-1 ring-amber-200/60 dark:ring-amber-700/40 px-4 py-3 text-sm text-amber-800 dark:text-amber-200 flex items-start gap-2">
+        <Icon name="AlertTriangle" className="w-4 h-4 mt-0.5 shrink-0" />
+        <p>
+          ยังไม่ได้จัดสรรงบให้กับ (โครงการนี้ × แหล่งงบนี้) — แอดมินการเงินต้องสร้าง
+          allocation ก่อน หรือเลือกใหม่
+        </p>
+      </div>
+    );
+  }
+  const allocated = Number(match.balance.allocated);
+  const held = Number(match.balance.held);
+  const committed = Number(match.balance.committed);
+  const spent = Number(match.balance.spent);
+  const available = Number(match.balance.available);
+  const insufficient = estTotal > available;
+  const used = spent + committed;
+
+  return (
+    <div className="md:col-span-2 rounded-2xl border border-ink-100 dark:border-white/5 bg-ink-50/40 dark:bg-ink-900/40 p-4">
+      <div className="flex items-start justify-between gap-3 mb-2">
+        <div>
+          <div className="text-xs uppercase tracking-wider text-ink-400 dark:text-ink-300">
+            งบโครงการ × แหล่งงบ
+          </div>
+          <div className="text-sm font-semibold text-ink-900 dark:text-white">
+            ปีงบ {match.fiscalYear} · จัดสรร {fmtNum(allocated)} บาท
+          </div>
+        </div>
+        <span
+          className={`text-[11px] tabular-nums font-medium px-2.5 py-0.5 rounded-full ${
+            insufficient
+              ? 'bg-rose-50 dark:bg-rose-900/40 text-rose-700 dark:text-rose-200'
+              : 'bg-emerald-50 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-200'
+          }`}
+        >
+          คงเหลือ {fmtNum(available)} ฿
+        </span>
+      </div>
+      <BudgetBar used={used} reserved={held} total={allocated} />
+      <div className="mt-2 grid grid-cols-3 gap-2 text-[11px] tabular-nums text-ink-500 dark:text-ink-300">
+        <div>ใช้แล้ว · {fmtNum(used)}</div>
+        <div>กันไว้ · {fmtNum(held)}</div>
+        <div>คงเหลือ · {fmtNum(available)}</div>
+      </div>
+      {estTotal > 0 && (
+        <div
+          className={`mt-3 rounded-xl px-3 py-2 text-sm flex items-center gap-2 ${
+            insufficient
+              ? 'bg-rose-50 dark:bg-rose-900/30 text-rose-700 dark:text-rose-200'
+              : 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-200'
+          }`}
+        >
+          <Icon
+            name={insufficient ? 'AlertOctagon' : 'CheckCircle2'}
+            className="w-4 h-4 shrink-0"
+          />
+          <div>
+            มูลค่าคำขอประมาณ <strong className="tabular-nums">{fmtNum(estTotal)}</strong> ฿ ·{' '}
+            {insufficient
+              ? `เกินงบคงเหลือ ${fmtNum(estTotal - available)} ฿`
+              : `เพียงพอ — หลังกัน คงเหลือ ${fmtNum(available - estTotal)} ฿`}
+          </div>
+        </div>
+      )}
+    </div>
   );
 }

@@ -8,6 +8,7 @@ import { AppShell } from '@/components/app-shell';
 import {
   PurchaseRequestForm,
   type ItemRow,
+  type BudgetSummary,
 } from '@/components/purchase-request-form';
 import {
   type BudgetSourceSummary,
@@ -58,9 +59,10 @@ export default async function EditRequestPage({
     throw err;
   }
 
-  const [projects, budgetSources] = await Promise.all([
+  const [projects, budgetSources, budgets] = await Promise.all([
     apiFetch<ProjectSummary[]>('/projects', { cookie }),
     apiFetch<BudgetSourceSummary[]>('/budget-sources', { cookie }),
+    apiFetch<BudgetSummary[]>('/budgets', { cookie }),
   ]);
   const tStatus = await getTranslations('prStatus');
 
@@ -138,6 +140,7 @@ export default async function EditRequestPage({
           }}
           projects={projects}
           budgetSources={budgetSources}
+          budgets={budgets}
           redirectTo={`/requests/${pr.id}`}
           submitLabel="บันทึกการแก้ไข"
         />

@@ -11,9 +11,24 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { StatusBadge } from '@/components/ui/badge';
 import { Icon } from '@/components/ui/icon';
+import { BudgetBar } from '@/components/ui/budget-bar';
 import { fmtNum } from '@/components/ui/format';
 import { PrActions } from './actions';
 import { RiskFlagsPanel } from './risk-flags';
+
+interface BudgetSummaryRow {
+  id: string;
+  projectId: string;
+  budgetSourceId: string;
+  fiscalYear: number;
+  balance: {
+    allocated: string;
+    held: string;
+    committed: string;
+    spent: string;
+    available: string;
+  };
+}
 
 interface PrDetail {
   id: string;
@@ -23,6 +38,8 @@ interface PrDetail {
   reason: string;
   status: PurchaseRequestStatus;
   requesterId: string;
+  projectId: string | null;
+  budgetSourceId: string | null;
   totalAmount: string | null;
   submittedAt: string | null;
   approvedAt: string | null;
@@ -96,15 +113,29 @@ export default async function RequestDetailPage({
   const cookieStore = await cookies();
 
   let pr: PrDetail;
+  const cookie = cookieStore.toString();
   try {
-    pr = await apiFetch<PrDetail>(`/purchase-requests/${id}`, {
-      cookie: cookieStore.toString(),
-    });
+    pr = await apiFetch<PrDetail>(`/purchase-requests/${id}`, { cookie });
   } catch (err) {
     if (err instanceof ApiError && err.status === 404) notFound();
     throw err;
   }
   const tStatus = await getTranslations('prStatus');
+
+  // Look up matching budget allocation if PR is linked.
+  let budgetMatch: BudgetSummaryRow | null = null;
+  if (pr.projectId && pr.budgetSourceId) {
+    try {
+      const all = await apiFetch<BudgetSummaryRow[]>('/budgets', { cookie });
+      budgetMatch =
+        all.find(
+          (b) =>
+            b.projectId === pr.projectId && b.budgetSourceId === pr.budgetSourceId,
+        ) ?? null;
+    } catch {
+      // ignore — non-critical
+    }
+  }
 
   const isOwner = pr.requesterId === user.id;
   const isProcurement = user.roles.includes('PROCUREMENT') || user.roles.includes('ADMIN');
@@ -291,6 +322,16 @@ export default async function RequestDetailPage({
           </div>
 
           <aside className="space-y-5">
+            {budgetMatch && (
+              <Card className="p-5">
+                <SectionTitle
+                  icon={<Icon name="Wallet" className="w-3.5 h-3.5" />}
+                  title="สรุปงบประมาณ"
+                  sub={`${pr.project?.name ?? ''} · ปี ${budgetMatch.fiscalYear}`}
+                />
+                <BudgetSummaryCard balance={budgetMatch.balance} prTotal={totalEst} />
+              </Card>
+            )}
             <RiskFlagsPanel
               prId={pr.id}
               flags={pr.riskFlags}
@@ -303,5 +344,71 @@ export default async function RequestDetailPage({
         <PrActions pr={pr} isOwner={isOwner} isProcurement={isProcurement} />
       </div>
     </AppShell>
+  );
+}
+
+function BudgetSummaryCard({
+  balance,
+  prTotal,
+}: {
+  balance: BudgetSummaryRow['balance'];
+  prTotal: number;
+}) {
+  const allocated = Number(balance.allocated);
+  const held = Number(balance.held);
+  const committed = Number(balance.committed);
+  const spent = Number(balance.spent);
+  const available = Number(balance.available);
+  const used = spent + committed;
+  const insufficient = prTotal > available && prTotal > 0;
+
+  return (
+    <div className="space-y-3">
+      <dl className="space-y-1 text-sm">
+        <div className="flex items-baseline justify-between">
+          <dt className="text-xs text-ink-500 dark:text-ink-300">งบจัดสรร</dt>
+          <dd className="font-mono tabular-nums text-ink-900 dark:text-white">
+            {fmtNum(allocated)}
+          </dd>
+        </div>
+        <div className="flex items-baseline justify-between">
+          <dt className="text-xs text-ink-500 dark:text-ink-300">จ่ายจริง + ผูกพัน</dt>
+          <dd className="font-mono tabular-nums text-ink-900 dark:text-white">
+            {fmtNum(used)}
+          </dd>
+        </div>
+        <div className="flex items-baseline justify-between">
+          <dt className="text-xs text-ink-500 dark:text-ink-300">กันไว้ (PR ที่ส่ง)</dt>
+          <dd className="font-mono tabular-nums text-amber-700 dark:text-amber-200">
+            {fmtNum(held)}
+          </dd>
+        </div>
+        <div className="flex items-baseline justify-between border-t border-dashed border-ink-100 dark:border-white/5 pt-1">
+          <dt className="text-xs font-medium text-ink-700 dark:text-ink-100">คงเหลือใช้ได้</dt>
+          <dd className="font-mono tabular-nums font-semibold text-emerald-700 dark:text-emerald-200">
+            {fmtNum(available)}
+          </dd>
+        </div>
+      </dl>
+      <BudgetBar used={used} reserved={held} total={allocated} />
+      {prTotal > 0 && (
+        <div
+          className={`rounded-xl px-3 py-2 text-xs flex items-start gap-2 ${
+            insufficient
+              ? 'bg-rose-50 dark:bg-rose-900/30 text-rose-700 dark:text-rose-200'
+              : 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-200'
+          }`}
+        >
+          <Icon
+            name={insufficient ? 'AlertOctagon' : 'CheckCircle2'}
+            className="w-3.5 h-3.5 mt-0.5 shrink-0"
+          />
+          <div>
+            มูลค่าคำขอ <strong className="tabular-nums">{fmtNum(prTotal)}</strong> ฿{' '}
+            {insufficient ? `· เกินงบ ${fmtNum(prTotal - available)} ฿` : '· งบเพียงพอ'}
+          </div>
+        </div>
+      )}
+    </div>
   );
 }

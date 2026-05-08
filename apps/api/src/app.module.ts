@@ -11,6 +11,7 @@ import { ExportsModule } from './exports/exports.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { ProjectsModule } from './projects/projects.module';
 import { BudgetSourcesModule } from './budget-sources/budget-sources.module';
+import { BudgetsModule } from './budgets/budgets.module';
 import { RuleConfigsModule } from './rule-configs/rule-configs.module';
 import { HealthController } from './health/health.controller';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
@@ -33,6 +34,7 @@ import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
     DashboardModule,
     ProjectsModule,
     BudgetSourcesModule,
+    BudgetsModule,
     RuleConfigsModule,
   ],
   controllers: [HealthController],

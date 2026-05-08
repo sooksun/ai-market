@@ -124,8 +124,58 @@ async function main() {
     });
   }
 
+  // Seed budget allocations: each project gets a slice of one budget source.
+  const projects = await prisma.project.findMany({
+    where: { schoolId: school.id, fiscalYear },
+  });
+  const sources = await prisma.budgetSource.findMany({
+    where: { schoolId: school.id, fiscalYear },
+  });
+  const allocations: Array<{ projectCode: string; sourceCode: string; amount: number }> = [
+    { projectCode: 'P-VOC', sourceCode: 'BS-01', amount: 600000 },
+    { projectCode: 'P-LIB', sourceCode: 'BS-01', amount: 400000 },
+    { projectCode: 'P-IT', sourceCode: 'BS-03', amount: 300000 },
+  ];
+  let allocCount = 0;
+  for (const a of allocations) {
+    const p = projects.find((x) => x.code === a.projectCode);
+    const s = sources.find((x) => x.code === a.sourceCode);
+    if (!p || !s) continue;
+    const existing = await prisma.budget.findUnique({
+      where: {
+        schoolId_fiscalYear_projectId_budgetSourceId: {
+          schoolId: school.id,
+          fiscalYear,
+          projectId: p.id,
+          budgetSourceId: s.id,
+        },
+      },
+    });
+    if (!existing) {
+      const created = await prisma.budget.create({
+        data: {
+          schoolId: school.id,
+          fiscalYear,
+          projectId: p.id,
+          budgetSourceId: s.id,
+          allocated: a.amount,
+          notes: 'seeded allocation',
+        },
+      });
+      await prisma.budgetMovement.create({
+        data: {
+          budgetId: created.id,
+          type: 'ALLOCATE',
+          amount: a.amount,
+          note: 'initial allocation',
+        },
+      });
+      allocCount++;
+    }
+  }
+
   console.log(
-    `Seeded school "${school.name}" (id=${school.id}) + ${seedUsers.length} users + ${ruleSeeds.length} rules + ${projectSeeds.length} projects + ${budgetSeeds.length} budget sources`,
+    `Seeded school "${school.name}" (id=${school.id}) + ${seedUsers.length} users + ${ruleSeeds.length} rules + ${projectSeeds.length} projects + ${budgetSeeds.length} budget sources + ${allocCount} budget allocations`,
   );
   console.log(`Default password for all seeded users: ${DEFAULT_PASSWORD}`);
 }

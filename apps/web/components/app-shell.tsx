@@ -36,7 +36,7 @@ const NAV: NavDef[] = [
     labelKey: 'budget',
     icon: 'wallet',
     group: 'ops',
-    comingSoon: true,
+    rolesAny: ['FINANCE', 'DIRECTOR', 'ADMIN'],
   },
   {
     href: '/spec',
@@ -88,6 +88,27 @@ const NAV: NavDef[] = [
     icon: 'shield-check',
     group: 'audit',
     rolesAny: ['AUDITOR', 'DIRECTOR', 'ADMIN'],
+  },
+  {
+    href: '/admin/projects',
+    labelKey: 'adminProjects',
+    icon: 'folder-kanban',
+    group: 'audit',
+    rolesAny: ['PROJECT_OWNER', 'FINANCE', 'ADMIN'],
+  },
+  {
+    href: '/admin/budget-sources',
+    labelKey: 'adminBudgetSources',
+    icon: 'landmark',
+    group: 'audit',
+    rolesAny: ['FINANCE', 'ADMIN'],
+  },
+  {
+    href: '/admin/budgets',
+    labelKey: 'adminBudgets',
+    icon: 'piggy-bank',
+    group: 'audit',
+    rolesAny: ['FINANCE', 'ADMIN'],
   },
   {
     href: '/admin/rule-configs',

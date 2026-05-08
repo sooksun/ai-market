@@ -2,7 +2,10 @@ import { cookies } from 'next/headers';
 import { requireUser } from '@/lib/auth';
 import { apiFetch } from '@/lib/api';
 import { AppShell } from '@/components/app-shell';
-import { PurchaseRequestForm } from '@/components/purchase-request-form';
+import {
+  PurchaseRequestForm,
+  type BudgetSummary,
+} from '@/components/purchase-request-form';
 import { PageHeader } from '@/components/ui/page-header';
 import type { BudgetSourceSummary, ProjectSummary } from '@ai-market/shared';
 
@@ -11,9 +14,10 @@ export default async function NewRequestPage() {
   const cookieStore = await cookies();
   const cookie = cookieStore.toString();
 
-  const [projects, budgetSources] = await Promise.all([
+  const [projects, budgetSources, budgets] = await Promise.all([
     apiFetch<ProjectSummary[]>('/projects', { cookie }),
     apiFetch<BudgetSourceSummary[]>('/budget-sources', { cookie }),
+    apiFetch<BudgetSummary[]>('/budgets', { cookie }),
   ]);
 
   return (
@@ -28,6 +32,7 @@ export default async function NewRequestPage() {
           mode="create"
           projects={projects}
           budgetSources={budgetSources}
+          budgets={budgets}
           redirectTo="/requests"
           submitLabel="บันทึกร่าง"
         />
