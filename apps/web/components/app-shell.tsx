@@ -9,10 +9,12 @@ interface NavItem {
 }
 
 const NAV: NavItem[] = [
+  { href: '/dashboard', label: 'Dashboard', rolesAny: ['DIRECTOR', 'ADMIN'] },
   { href: '/requests', label: 'คำขอซื้อ' },
   { href: '/requests/new', label: 'สร้างคำขอ' },
   { href: '/inbox', label: 'Inbox พัสดุ', rolesAny: ['PROCUREMENT', 'DIRECTOR', 'ADMIN'] },
   { href: '/audit-logs', label: 'Audit Logs', rolesAny: ['AUDITOR', 'DIRECTOR', 'ADMIN'] },
+  { href: '/admin/rule-configs', label: 'ตั้งค่าระบบ', rolesAny: ['ADMIN'] },
   { href: '/me', label: 'โปรไฟล์' },
 ];
 

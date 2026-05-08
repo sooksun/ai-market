@@ -52,6 +52,8 @@ export type PurchaseRequestItemInput = z.infer<typeof PurchaseRequestItemInputSc
 export const CreatePurchaseRequestSchema = z.object({
   title: z.string().min(1).max(255),
   reason: z.string().min(1).max(5000),
+  projectId: z.string().min(1).max(64).nullable().optional(),
+  budgetSourceId: z.string().min(1).max(64).nullable().optional(),
   items: z.array(PurchaseRequestItemInputSchema).min(1).max(200),
 });
 export type CreatePurchaseRequestInput = z.infer<typeof CreatePurchaseRequestSchema>;
@@ -60,6 +62,24 @@ export const UpdatePurchaseRequestSchema = CreatePurchaseRequestSchema.partial()
   items: z.array(PurchaseRequestItemInputSchema).min(1).max(200).optional(),
 });
 export type UpdatePurchaseRequestInput = z.infer<typeof UpdatePurchaseRequestSchema>;
+
+export const ProjectSummarySchema = z.object({
+  id: z.string(),
+  code: z.string().nullable(),
+  name: z.string(),
+  fiscalYear: z.number(),
+});
+export type ProjectSummary = z.infer<typeof ProjectSummarySchema>;
+
+export const BudgetSourceSummarySchema = z.object({
+  id: z.string(),
+  code: z.string().nullable(),
+  name: z.string(),
+  type: z.string(),
+  fiscalYear: z.number(),
+  totalAmount: z.string(),
+});
+export type BudgetSourceSummary = z.infer<typeof BudgetSourceSummarySchema>;
 
 export const ReturnPurchaseRequestSchema = z.object({
   reason: z.string().min(1).max(2000),

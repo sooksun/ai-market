@@ -75,7 +75,9 @@ pnpm lint                 # lint ทุก package
 pnpm format               # prettier เขียนทับ
 
 pnpm db:generate          # prisma generate
-pnpm db:migrate           # prisma migrate dev
+pnpm db:migrate           # prisma migrate dev (จะ prompt ชื่อ migration)
+# ตั้งชื่อ migration ตรง ๆ — เลี่ยง pnpm "--" double-wrap:
+pnpm --filter @ai-market/db migrate:dev --name your-migration-name
 pnpm db:studio            # เปิด Prisma Studio
 pnpm db:seed              # seed ข้อมูลทดสอบ
 
@@ -95,12 +97,18 @@ Phase 1 vertical slice พร้อมใช้งาน:
 - ✓ AI Cloudiness check: `POST /ai/check-cloudiness` (manual re-run) + auto trigger ตอน `submit` (background, fire-and-forget)
 - ✓ Risk flags: `POST /purchase-requests/:id/risk-flags/:flagId/dismiss`
 - ✓ Audit logs: `GET /audit-logs` (filter: entityType, entityId, userId, action, dateFrom/To, q · pagination)
-- ✓ Web: `/login`, `/requests`, `/requests/new`, `/requests/[id]` (detail + actions + risk panel + ประวัติ), `/requests/[id]/edit`, `/inbox` (procurement tabs), `/audit-logs` (filter + table + before/after diff), `/me`
+- ✓ Excel export: `GET /purchase-requests/:id/export.xlsx` (4 sheets: ข้อมูล · รายการ · สเปก · ความเสี่ยง)
+- ✓ Print/PDF page: `/requests/[id]/print` — บันทึกข้อความรูปแบบราชการ + `@media print` CSS (Ctrl+P → save as PDF)
+- ✓ Director dashboard: `GET /dashboard/director` (summary cards, status breakdown, risk severity, top requesters, AI usage, recent activity)
+- ✓ Project / BudgetSource (Phase 1.8 placeholder): `GET /projects`, `GET /budget-sources` (read-only list) + ผูกใน PR ผ่าน `projectId` / `budgetSourceId`
+- ✓ Rule Configs CRUD (ADMIN only): `GET/POST/PATCH/DELETE /rule-configs` + audit log อัตโนมัติ
+- ✓ Web: `/login`, `/dashboard`, `/requests`, `/requests/new`, `/requests/[id]` (detail + Excel + Print buttons), `/requests/[id]/edit`, `/requests/[id]/print`, `/inbox`, `/audit-logs`, `/admin/rule-configs` (ADMIN), `/me`
 
-ยังต้องทำ Phase 1 ให้ครบ (ดู [`task.md`](./task.md)):
-- Export PDF/Excel
-- Director dashboard
-- Refresh token rotation
+ยังต้องทำใน Phase 1 (ถ้าต้องการ):
+- Refresh token rotation (ปัจจุบันแค่ verify + reissue)
+- Server-side PDF render via Puppeteer / @react-pdf (ตอนนี้ใช้ browser print)
+- รับ Excel/CSV upload ใน `/ai/parse-items` (ตอนนี้รับเฉพาะ text)
+- next-intl และ CSRF token
 
 ## ภาษา
 

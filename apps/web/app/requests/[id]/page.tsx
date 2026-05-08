@@ -23,6 +23,14 @@ interface PrDetail {
   createdAt: string;
   updatedAt: string;
   requester: { id: string; fullName: string; email: string };
+  project: { id: string; code: string | null; name: string; fiscalYear: number } | null;
+  budgetSource: {
+    id: string;
+    code: string | null;
+    name: string;
+    type: string;
+    fiscalYear: number;
+  } | null;
   items: Array<{
     id: string;
     ordinal: number;
@@ -118,6 +126,19 @@ export default async function RequestDetailPage({
               ประวัติ
             </Link>
           )}
+          <a
+            href={`${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3100/api/v1'}/purchase-requests/${pr.id}/export.xlsx`}
+            className="rounded-md border border-slate-300 px-3 py-1 text-xs text-slate-700 hover:bg-slate-100"
+          >
+            Excel
+          </a>
+          <Link
+            href={`/requests/${pr.id}/print` as never}
+            target="_blank"
+            className="rounded-md border border-slate-300 px-3 py-1 text-xs text-slate-700 hover:bg-slate-100"
+          >
+            พิมพ์ / PDF
+          </Link>
         </div>
       </div>
 
@@ -126,6 +147,52 @@ export default async function RequestDetailPage({
           <section className="rounded-md border border-slate-200 bg-white p-6 shadow-sm">
             <h2 className="text-sm font-semibold text-slate-700">เหตุผลความจำเป็น</h2>
             <p className="mt-2 whitespace-pre-wrap text-sm text-slate-800">{pr.reason}</p>
+          </section>
+
+          <section className="rounded-md border border-slate-200 bg-white p-6 shadow-sm">
+            <h2 className="text-sm font-semibold text-slate-700">โครงการ / แหล่งงบ</h2>
+            <dl className="mt-3 grid gap-3 text-sm sm:grid-cols-2">
+              <div>
+                <dt className="text-xs text-slate-500">โครงการ</dt>
+                <dd className="mt-0.5 text-slate-800">
+                  {pr.project ? (
+                    <>
+                      {pr.project.code && (
+                        <span className="font-mono text-xs text-slate-500">
+                          [{pr.project.code}]{' '}
+                        </span>
+                      )}
+                      {pr.project.name}
+                      <span className="ml-1 text-xs text-slate-500">
+                        (ปี {pr.project.fiscalYear})
+                      </span>
+                    </>
+                  ) : (
+                    <span className="text-slate-400">— ยังไม่ระบุ —</span>
+                  )}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-xs text-slate-500">แหล่งงบ</dt>
+                <dd className="mt-0.5 text-slate-800">
+                  {pr.budgetSource ? (
+                    <>
+                      {pr.budgetSource.code && (
+                        <span className="font-mono text-xs text-slate-500">
+                          [{pr.budgetSource.code}]{' '}
+                        </span>
+                      )}
+                      {pr.budgetSource.name}
+                      <span className="ml-1 text-xs text-slate-500">
+                        · {pr.budgetSource.type} (ปี {pr.budgetSource.fiscalYear})
+                      </span>
+                    </>
+                  ) : (
+                    <span className="text-slate-400">— ยังไม่ระบุ —</span>
+                  )}
+                </dd>
+              </div>
+            </dl>
           </section>
 
           <section className="overflow-hidden rounded-md border border-slate-200 bg-white shadow-sm">

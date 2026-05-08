@@ -7,7 +7,12 @@ import {
   PurchaseRequestForm,
   type ItemRow,
 } from '@/components/purchase-request-form';
-import { PR_STATUS_LABELS_TH, type PurchaseRequestStatus } from '@ai-market/shared';
+import {
+  PR_STATUS_LABELS_TH,
+  type BudgetSourceSummary,
+  type ProjectSummary,
+  type PurchaseRequestStatus,
+} from '@ai-market/shared';
 
 interface PrDetail {
   id: string;
@@ -16,6 +21,8 @@ interface PrDetail {
   reason: string;
   status: PurchaseRequestStatus;
   requesterId: string;
+  projectId: string | null;
+  budgetSourceId: string | null;
   items: Array<{
     ordinal: number;
     name: string;
@@ -38,15 +45,20 @@ export default async function EditRequestPage({
   const user = await requireUser();
   const cookieStore = await cookies();
 
+  const cookie = cookieStore.toString();
+
   let pr: PrDetail;
   try {
-    pr = await apiFetch<PrDetail>(`/purchase-requests/${id}`, {
-      cookie: cookieStore.toString(),
-    });
+    pr = await apiFetch<PrDetail>(`/purchase-requests/${id}`, { cookie });
   } catch (err) {
     if (err instanceof ApiError && err.status === 404) notFound();
     throw err;
   }
+
+  const [projects, budgetSources] = await Promise.all([
+    apiFetch<ProjectSummary[]>('/projects', { cookie }),
+    apiFetch<BudgetSourceSummary[]>('/budget-sources', { cookie }),
+  ]);
 
   // Owner-only
   if (pr.requesterId !== user.id) {
@@ -105,7 +117,15 @@ export default async function EditRequestPage({
         <PurchaseRequestForm
           mode="edit"
           prId={pr.id}
-          initial={{ title: pr.title, reason: pr.reason, items }}
+          initial={{
+            title: pr.title,
+            reason: pr.reason,
+            projectId: pr.projectId,
+            budgetSourceId: pr.budgetSourceId,
+            items,
+          }}
+          projects={projects}
+          budgetSources={budgetSources}
           redirectTo={`/requests/${pr.id}`}
           submitLabel="บันทึกการแก้ไข"
         />

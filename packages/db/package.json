@@ -10,11 +10,11 @@
   },
   "scripts": {
     "generate": "prisma generate",
-    "migrate:dev": "prisma migrate dev",
-    "migrate:deploy": "prisma migrate deploy",
-    "migrate:reset": "prisma migrate reset",
-    "studio": "prisma studio",
-    "seed": "tsx prisma/seed.ts",
+    "migrate:dev": "dotenv -e ../../.env -- prisma migrate dev",
+    "migrate:deploy": "dotenv -e ../../.env -- prisma migrate deploy",
+    "migrate:reset": "dotenv -e ../../.env -- prisma migrate reset",
+    "studio": "dotenv -e ../../.env -- prisma studio",
+    "seed": "dotenv -e ../../.env -- tsx prisma/seed.ts",
     "typecheck": "tsc --noEmit",
     "lint": "echo \"(db) lint placeholder\"",
     "clean": "rimraf dist .turbo node_modules/.prisma"
@@ -31,6 +31,7 @@
     "tsx": "^4.19.2",
     "typescript": "^5.6.3",
     "rimraf": "^6.0.1",
+    "dotenv-cli": "^7.4.4",
     "@types/node": "^22.9.0",
     "bcryptjs": "^2.4.3",
     "@types/bcryptjs": "^2.4.6"

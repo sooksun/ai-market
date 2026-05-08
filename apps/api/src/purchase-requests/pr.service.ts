@@ -98,6 +98,10 @@ export class PrService {
       where: { id },
       include: {
         requester: { select: { id: true, fullName: true, email: true } },
+        project: { select: { id: true, code: true, name: true, fiscalYear: true } },
+        budgetSource: {
+          select: { id: true, code: true, name: true, type: true, fiscalYear: true },
+        },
         items: {
           orderBy: { ordinal: 'asc' },
           include: { specifications: { orderBy: { ordinal: 'asc' } } },
@@ -122,12 +126,15 @@ export class PrService {
   }
 
   async create(user: AuthenticatedUser, input: CreatePurchaseRequestInput) {
+    await this.assertProjectAndBudgetBelongToSchool(user.schoolId, input.projectId, input.budgetSourceId);
     return this.prisma.purchaseRequest.create({
       data: {
         schoolId: user.schoolId,
         requesterId: user.id,
         title: input.title,
         reason: input.reason,
+        projectId: input.projectId ?? null,
+        budgetSourceId: input.budgetSourceId ?? null,
         status: PurchaseRequestStatus.DRAFT,
         items: {
           create: input.items.map((item, idx) => ({
@@ -158,12 +165,20 @@ export class PrService {
       });
     }
 
+    if (input.projectId !== undefined || input.budgetSourceId !== undefined) {
+      await this.assertProjectAndBudgetBelongToSchool(user.schoolId, input.projectId, input.budgetSourceId);
+    }
+
     return this.prisma.$transaction(async (tx) => {
       await tx.purchaseRequest.update({
         where: { id },
         data: {
           ...(input.title !== undefined ? { title: input.title } : {}),
           ...(input.reason !== undefined ? { reason: input.reason } : {}),
+          ...(input.projectId !== undefined ? { projectId: input.projectId } : {}),
+          ...(input.budgetSourceId !== undefined
+            ? { budgetSourceId: input.budgetSourceId }
+            : {}),
         },
       });
       if (input.items) {
@@ -291,6 +306,33 @@ export class PrService {
       where: { id },
       data: { status: PurchaseRequestStatus.CANCELLED },
     });
+  }
+
+  private async assertProjectAndBudgetBelongToSchool(
+    schoolId: string,
+    projectId?: string | null,
+    budgetSourceId?: string | null,
+  ): Promise<void> {
+    if (projectId) {
+      const found = await this.prisma.project.findUnique({ where: { id: projectId } });
+      if (!found || found.schoolId !== schoolId || found.deletedAt) {
+        throw new NotFoundException({
+          code: 'PROJECT_NOT_FOUND',
+          message: 'ไม่พบโครงการ หรืออยู่นอกโรงเรียนของคุณ',
+        });
+      }
+    }
+    if (budgetSourceId) {
+      const found = await this.prisma.budgetSource.findUnique({
+        where: { id: budgetSourceId },
+      });
+      if (!found || found.schoolId !== schoolId || found.deletedAt) {
+        throw new NotFoundException({
+          code: 'BUDGET_SOURCE_NOT_FOUND',
+          message: 'ไม่พบแหล่งงบ หรืออยู่นอกโรงเรียนของคุณ',
+        });
+      }
+    }
   }
 
   private requireRole(user: AuthenticatedUser, allowed: string[]) {

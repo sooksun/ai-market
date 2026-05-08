@@ -2,7 +2,11 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import type { ParseItemsResponse } from '@ai-market/shared';
+import type {
+  BudgetSourceSummary,
+  ParseItemsResponse,
+  ProjectSummary,
+} from '@ai-market/shared';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3100/api/v1';
 
@@ -24,8 +28,12 @@ export interface PurchaseRequestFormProps {
   initial?: {
     title: string;
     reason: string;
+    projectId?: string | null;
+    budgetSourceId?: string | null;
     items: ItemRow[];
   };
+  projects: ProjectSummary[];
+  budgetSources: BudgetSourceSummary[];
   redirectTo: string;
   submitLabel?: string;
 }
@@ -34,12 +42,16 @@ export function PurchaseRequestForm({
   mode,
   prId,
   initial,
+  projects,
+  budgetSources,
   redirectTo,
   submitLabel,
 }: PurchaseRequestFormProps) {
   const router = useRouter();
   const [title, setTitle] = useState(initial?.title ?? '');
   const [reason, setReason] = useState(initial?.reason ?? '');
+  const [projectId, setProjectId] = useState<string>(initial?.projectId ?? '');
+  const [budgetSourceId, setBudgetSourceId] = useState<string>(initial?.budgetSourceId ?? '');
   const [items, setItems] = useState<ItemRow[]>(initial?.items ?? [{ ...EMPTY_ROW }]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -124,6 +136,8 @@ export function PurchaseRequestForm({
         body: JSON.stringify({
           title,
           reason,
+          projectId: projectId || null,
+          budgetSourceId: budgetSourceId || null,
           items: items.map(({ confidence: _c, ...rest }) => rest),
         }),
       });
@@ -161,6 +175,53 @@ export function PurchaseRequestForm({
             className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
           />
         </label>
+
+        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+          <label className="block text-sm">
+            โครงการ <span className="text-xs text-slate-400">(เลือกได้ภายหลัง)</span>
+            <select
+              value={projectId}
+              onChange={(e) => setProjectId(e.target.value)}
+              className="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"
+            >
+              <option value="">— ยังไม่ระบุ —</option>
+              {projects.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.code ? `[${p.code}] ` : ''}
+                  {p.name} (ปี {p.fiscalYear})
+                </option>
+              ))}
+            </select>
+            {projects.length === 0 && (
+              <p className="mt-1 text-xs text-slate-500">
+                ยังไม่มีโครงการในระบบ — Phase 2 จะเปิด UI ตั้งโครงการให้
+              </p>
+            )}
+          </label>
+
+          <label className="block text-sm">
+            แหล่งงบ <span className="text-xs text-slate-400">(เลือกได้ภายหลัง)</span>
+            <select
+              value={budgetSourceId}
+              onChange={(e) => setBudgetSourceId(e.target.value)}
+              className="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"
+            >
+              <option value="">— ยังไม่ระบุ —</option>
+              {budgetSources.map((b) => (
+                <option key={b.id} value={b.id}>
+                  {b.code ? `[${b.code}] ` : ''}
+                  {b.name} · {b.type} · วงเงิน{' '}
+                  {Number(b.totalAmount).toLocaleString('th-TH')} บาท
+                </option>
+              ))}
+            </select>
+            {budgetSources.length === 0 && (
+              <p className="mt-1 text-xs text-slate-500">
+                ยังไม่มีแหล่งงบในระบบ — Phase 2 จะเปิด UI ตั้งงบให้
+              </p>
+            )}
+          </label>
+        </div>
       </section>
 
       <section className="rounded-md border border-slate-200 bg-white p-6 shadow-sm">

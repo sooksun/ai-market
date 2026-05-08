@@ -86,7 +86,47 @@ async function main() {
     });
   }
 
-  console.log(`Seeded school "${school.name}" (id=${school.id}) + ${seedUsers.length} users + ${ruleSeeds.length} rules`);
+  const fiscalYear = 2568;
+  const projectSeeds: { code: string; name: string }[] = [
+    { code: 'P-VOC', name: 'พัฒนาห้องเรียนวิชาชีพ' },
+    { code: 'P-LIB', name: 'ปรับปรุงห้องสมุด' },
+    { code: 'P-IT', name: 'พัฒนาระบบ IT โรงเรียน' },
+  ];
+  for (const p of projectSeeds) {
+    await prisma.project.upsert({
+      where: {
+        schoolId_fiscalYear_code: { schoolId: school.id, fiscalYear, code: p.code },
+      },
+      update: { name: p.name },
+      create: { schoolId: school.id, fiscalYear, code: p.code, name: p.name },
+    });
+  }
+
+  const budgetSeeds: { code: string; name: string; type: string; totalAmount: number }[] = [
+    { code: 'BS-01', name: 'งบอุดหนุนทั่วไป', type: 'อุดหนุน', totalAmount: 1500000 },
+    { code: 'BS-02', name: 'งบรายได้สถานศึกษา', type: 'รายได้', totalAmount: 800000 },
+    { code: 'BS-03', name: 'งบโครงการเฉพาะ (สพฐ.)', type: 'โครงการเฉพาะ', totalAmount: 500000 },
+  ];
+  for (const b of budgetSeeds) {
+    await prisma.budgetSource.upsert({
+      where: {
+        schoolId_fiscalYear_code: { schoolId: school.id, fiscalYear, code: b.code },
+      },
+      update: { name: b.name, type: b.type, totalAmount: b.totalAmount },
+      create: {
+        schoolId: school.id,
+        fiscalYear,
+        code: b.code,
+        name: b.name,
+        type: b.type,
+        totalAmount: b.totalAmount,
+      },
+    });
+  }
+
+  console.log(
+    `Seeded school "${school.name}" (id=${school.id}) + ${seedUsers.length} users + ${ruleSeeds.length} rules + ${projectSeeds.length} projects + ${budgetSeeds.length} budget sources`,
+  );
   console.log(`Default password for all seeded users: ${DEFAULT_PASSWORD}`);
 }
 

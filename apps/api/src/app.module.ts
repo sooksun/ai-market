@@ -7,6 +7,11 @@ import { AuthModule } from './auth/auth.module';
 import { AiModule } from './ai/ai.module';
 import { PrModule } from './purchase-requests/pr.module';
 import { AuditLogsModule } from './audit-logs/audit-logs.module';
+import { ExportsModule } from './exports/exports.module';
+import { DashboardModule } from './dashboard/dashboard.module';
+import { ProjectsModule } from './projects/projects.module';
+import { BudgetSourcesModule } from './budget-sources/budget-sources.module';
+import { RuleConfigsModule } from './rule-configs/rule-configs.module';
 import { HealthController } from './health/health.controller';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
@@ -24,6 +29,11 @@ import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
     AiModule,
     PrModule,
     AuditLogsModule,
+    ExportsModule,
+    DashboardModule,
+    ProjectsModule,
+    BudgetSourcesModule,
+    RuleConfigsModule,
   ],
   controllers: [HealthController],
   providers: [

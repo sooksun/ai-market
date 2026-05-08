@@ -98,8 +98,51 @@ model School {
   auditLogs        AuditLog[]
   purchaseRequests PurchaseRequest[]
   attachments      Attachment[]
+  projects         Project[]
+  budgetSources    BudgetSource[]
 
   @@map("schools")
+}
+
+// Phase 1.8 placeholder — Phase 2 จะมี budgets/budget_movements เต็มรูป
+model Project {
+  id         String    @id @default(cuid())
+  schoolId   String    @map("school_id")
+  code       String?
+  name       String
+  fiscalYear Int       @map("fiscal_year")
+  active     Boolean   @default(true)
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+  deletedAt  DateTime? @map("deleted_at")
+
+  school           School            @relation(fields: [schoolId], references: [id])
+  purchaseRequests PurchaseRequest[]
+
+  @@unique([schoolId, fiscalYear, code])
+  @@index([schoolId, active])
+  @@map("projects")
+}
+
+model BudgetSource {
+  id          String    @id @default(cuid())
+  schoolId    String    @map("school_id")
+  code        String?
+  name        String
+  type        String
+  fiscalYear  Int       @map("fiscal_year")
+  totalAmount Decimal   @map("total_amount") @db.Decimal(15, 2)
+  active      Boolean   @default(true)
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
+
+  school           School            @relation(fields: [schoolId], references: [id])
+  purchaseRequests PurchaseRequest[]
+
+  @@unique([schoolId, fiscalYear, code])
+  @@index([schoolId, active])
+  @@map("budget_sources")
 }
 
 model User {
@@ -212,6 +255,9 @@ model PurchaseRequest {
   requesterId String                @map("requester_id")
   totalAmount Decimal?              @map("total_amount") @db.Decimal(15, 2)
 
+  projectId      String? @map("project_id")
+  budgetSourceId String? @map("budget_source_id")
+
   submittedAt DateTime? @map("submitted_at")
   approvedAt  DateTime? @map("approved_at")
   closedAt    DateTime? @map("closed_at")
@@ -220,14 +266,18 @@ model PurchaseRequest {
   updatedAt DateTime  @updatedAt @map("updated_at")
   deletedAt DateTime? @map("deleted_at")
 
-  school    School                @relation(fields: [schoolId], references: [id])
-  requester User                  @relation("RequesterRequests", fields: [requesterId], references: [id])
-  items     PurchaseRequestItem[]
-  riskFlags AiRiskFlag[]
+  school       School                @relation(fields: [schoolId], references: [id])
+  requester    User                  @relation("RequesterRequests", fields: [requesterId], references: [id])
+  project      Project?              @relation(fields: [projectId], references: [id])
+  budgetSource BudgetSource?         @relation(fields: [budgetSourceId], references: [id])
+  items        PurchaseRequestItem[]
+  riskFlags    AiRiskFlag[]
 
   @@unique([schoolId, docNo])
   @@index([schoolId, status, createdAt])
   @@index([requesterId, createdAt])
+  @@index([projectId])
+  @@index([budgetSourceId])
   @@map("purchase_requests")
 }
 
