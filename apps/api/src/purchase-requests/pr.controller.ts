@@ -12,10 +12,12 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import {
+  ApplySpecificationsSchema,
   CreatePurchaseRequestSchema,
   UpdatePurchaseRequestSchema,
   ReturnPurchaseRequestSchema,
   DismissRiskFlagSchema,
+  type ApplySpecificationsInput,
   type CreatePurchaseRequestInput,
   type UpdatePurchaseRequestInput,
   type ReturnPurchaseRequestInput,
@@ -144,6 +146,23 @@ export class PrController {
   })
   approveForComparison(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
     return this.pr.approveForComparison(user, id);
+  }
+
+  @Post(':id/items/:itemId/specifications')
+  @HttpCode(HttpStatus.OK)
+  @AuditAction({
+    action: 'purchase_request.apply_specifications',
+    entityType: 'PurchaseRequestItem',
+    entityIdParam: 'itemId',
+  })
+  applyItemSpecifications(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Param('itemId') itemId: string,
+    @Body(new ZodValidationPipe(ApplySpecificationsSchema))
+    body: ApplySpecificationsInput,
+  ) {
+    return this.pr.applyItemSpecifications(user, id, itemId, body);
   }
 
   @Roles('PROCUREMENT', 'DIRECTOR', 'ADMIN')

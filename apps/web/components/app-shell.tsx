@@ -44,7 +44,6 @@ const NAV: NavDef[] = [
     icon: 'sparkles',
     group: 'ops',
     ai: true,
-    comingSoon: true,
   },
   {
     href: '/compare',

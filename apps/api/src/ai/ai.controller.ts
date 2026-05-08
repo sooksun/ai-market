@@ -12,12 +12,15 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import {
   ParseItemsInputSchema,
   CheckCloudinessInputSchema,
+  SpecWriterInputSchema,
   type ParseItemsInput,
   type CheckCloudinessInput,
+  type SpecWriterInput,
 } from '@ai-market/shared';
 import { ParseItemsService } from './services/parse-items.service';
 import { CloudinessService } from './services/cloudiness.service';
 import { FileParserService } from './services/file-parser.service';
+import { SpecWriterService } from './services/spec-writer.service';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
@@ -36,6 +39,7 @@ export class AiController {
     private parseItems: ParseItemsService,
     private cloudiness: CloudinessService,
     private fileParser: FileParserService,
+    private specWriter: SpecWriterService,
   ) {}
 
   @Post('parse-items')
@@ -78,5 +82,14 @@ export class AiController {
     @Body(new ZodValidationPipe(CheckCloudinessInputSchema)) body: CheckCloudinessInput,
   ) {
     return this.cloudiness.check(user, body.purchaseRequestId);
+  }
+
+  @Post('spec-writer')
+  @AuditAction({ action: 'ai.spec_writer', entityType: 'PurchaseRequestItem' })
+  specWriterRewrite(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body(new ZodValidationPipe(SpecWriterInputSchema)) body: SpecWriterInput,
+  ) {
+    return this.specWriter.rewrite(user, body.itemId, body.tone, body.rawSpec);
   }
 }

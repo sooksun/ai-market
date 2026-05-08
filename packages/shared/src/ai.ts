@@ -92,3 +92,71 @@ export const DismissRiskFlagSchema = z.object({
   reason: z.string().min(1).max(500),
 });
 export type DismissRiskFlagInput = z.infer<typeof DismissRiskFlagSchema>;
+
+// ─────────────────────────────────────────────
+// Spec Writer
+// ─────────────────────────────────────────────
+
+export const SpecToneSchema = z.enum(['balanced', 'strict', 'minimal']);
+export type SpecTone = z.infer<typeof SpecToneSchema>;
+
+export const SPEC_TONE_LABELS_TH: Record<SpecTone, string> = {
+  balanced: 'สมดุล',
+  strict: 'เข้มงวด',
+  minimal: 'ขั้นต่ำ',
+};
+
+export const SpecLevelOutputSchema = z.enum(['MUST_HAVE', 'NICE_TO_HAVE', 'INFO']);
+export type SpecLevelOutput = z.infer<typeof SpecLevelOutputSchema>;
+
+export const SpecWriterRiskSchema = z.object({
+  type: z.enum(['BRAND_LOCK', 'AMBIGUOUS_SPEC', 'CLASSIFICATION_UNCERTAIN', 'OTHER']),
+  severity: z.enum(['LOW', 'MEDIUM', 'HIGH']),
+  message: z.string(),
+  suggestion: z.string().optional(),
+});
+export type SpecWriterRisk = z.infer<typeof SpecWriterRiskSchema>;
+
+export const SpecWriterSpecSchema = z.object({
+  key: z.string().min(1).max(120),
+  value: z.string().min(1).max(2000),
+  level: SpecLevelOutputSchema,
+});
+export type SpecWriterSpec = z.infer<typeof SpecWriterSpecSchema>;
+
+export const SpecWriterToolOutputSchema = z.object({
+  specifications: z.array(SpecWriterSpecSchema),
+  risks: z.array(SpecWriterRiskSchema),
+  confidence: z.number().min(0).max(1),
+});
+export type SpecWriterToolOutput = z.infer<typeof SpecWriterToolOutputSchema>;
+
+export const SpecWriterInputSchema = z.object({
+  itemId: z.string().min(1),
+  tone: SpecToneSchema.optional().default('balanced'),
+  rawSpec: z.string().max(2000).optional(),
+});
+export type SpecWriterInput = z.infer<typeof SpecWriterInputSchema>;
+
+export const SpecWriterResponseSchema = SpecWriterToolOutputSchema.extend({
+  invocationId: z.string(),
+  itemId: z.string(),
+  itemName: z.string(),
+  tone: SpecToneSchema,
+});
+export type SpecWriterResponse = z.infer<typeof SpecWriterResponseSchema>;
+
+export const ApplySpecificationsSchema = z.object({
+  specifications: z
+    .array(
+      z.object({
+        key: z.string().min(1).max(120),
+        value: z.string().min(1).max(2000),
+        level: SpecLevelOutputSchema.optional().default('MUST_HAVE'),
+        source: z.enum(['HUMAN', 'AI']).optional().default('HUMAN'),
+      }),
+    )
+    .min(0)
+    .max(50),
+});
+export type ApplySpecificationsInput = z.infer<typeof ApplySpecificationsSchema>;

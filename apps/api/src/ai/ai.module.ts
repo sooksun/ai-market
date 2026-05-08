@@ -4,6 +4,7 @@ import { AiController } from './ai.controller';
 import { ParseItemsService } from './services/parse-items.service';
 import { CloudinessService } from './services/cloudiness.service';
 import { FileParserService } from './services/file-parser.service';
+import { SpecWriterService } from './services/spec-writer.service';
 import { AiInvocationService } from './ai-invocation.service';
 import { ANTHROPIC, createAnthropic } from './anthropic.client';
 
@@ -13,6 +14,7 @@ import { ANTHROPIC, createAnthropic } from './anthropic.client';
     ParseItemsService,
     CloudinessService,
     FileParserService,
+    SpecWriterService,
     AiInvocationService,
     {
       provide: ANTHROPIC,
@@ -21,6 +23,6 @@ import { ANTHROPIC, createAnthropic } from './anthropic.client';
         createAnthropic(config.get<string>('ANTHROPIC_API_KEY')),
     },
   ],
-  exports: [ParseItemsService, CloudinessService, AiInvocationService],
+  exports: [ParseItemsService, CloudinessService, SpecWriterService, AiInvocationService],
 })
 export class AiModule {}

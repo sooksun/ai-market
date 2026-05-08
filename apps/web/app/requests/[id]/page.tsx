@@ -291,7 +291,21 @@ export default async function RequestDetailPage({
                         {it.ordinal}
                       </td>
                       <td className="px-4 py-3">
-                        <div className="font-medium text-ink-900 dark:text-white">{it.name}</div>
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="font-medium text-ink-900 dark:text-white">
+                            {it.name}
+                          </div>
+                          {(isOwner || isProcurement) && (
+                            <Link
+                              href={`/spec?prId=${pr.id}&itemId=${it.id}` as never}
+                              className="shrink-0 inline-flex items-center gap-1 rounded-lg grad-brand-soft text-brand-700 dark:text-brand-200 ring-1 ring-brand-200/60 dark:ring-brand-700/40 px-2 py-0.5 text-[11px] font-medium hover:shadow-sm"
+                              title="ให้ AI ช่วยเขียนสเปก"
+                            >
+                              <Icon name="Sparkles" className="w-3 h-3" />
+                              สเปก
+                            </Link>
+                          )}
+                        </div>
                         {it.notes && (
                           <div className="text-xs text-ink-400 dark:text-ink-300">{it.notes}</div>
                         )}

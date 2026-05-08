@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { Prisma, PurchaseRequestStatus } from '@ai-market/db';
 import {
+  type ApplySpecificationsInput,
   type CreatePurchaseRequestInput,
   type UpdatePurchaseRequestInput,
   type PurchaseRequestStatus as PrStatusType,
@@ -250,6 +251,53 @@ export class PrService {
     this.cloudiness.triggerBackground(id, user);
 
     return updated;
+  }
+
+  async applyItemSpecifications(
+    user: AuthenticatedUser,
+    prId: string,
+    itemId: string,
+    input: ApplySpecificationsInput,
+  ) {
+    const pr = await this.getById(user, prId);
+    const item = pr.items.find((it) => it.id === itemId);
+    if (!item) {
+      throw new NotFoundException({ code: 'NOT_FOUND', message: 'ไม่พบรายการพัสดุ' });
+    }
+    const isOwner = pr.requesterId === user.id;
+    const isProcurement =
+      user.roles.includes('PROCUREMENT') || user.roles.includes('ADMIN');
+    if (!isOwner && !isProcurement) {
+      throw new ForbiddenException({
+        code: 'FORBIDDEN',
+        message: 'แก้สเปกได้เฉพาะเจ้าของคำขอหรือเจ้าหน้าที่พัสดุ',
+      });
+    }
+    if (isOwner && pr.status !== 'DRAFT' && pr.status !== 'RETURNED') {
+      throw new ConflictException({
+        code: 'INVALID_STATE_FOR_OWNER',
+        message: 'เจ้าของแก้สเปกได้เฉพาะ DRAFT/RETURNED',
+      });
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      await tx.itemSpecification.deleteMany({ where: { itemId } });
+      if (input.specifications.length === 0) return [];
+      await tx.itemSpecification.createMany({
+        data: input.specifications.map((s, idx) => ({
+          itemId,
+          key: s.key,
+          value: s.value,
+          level: s.level,
+          source: s.source,
+          ordinal: idx,
+        })),
+      });
+      return tx.itemSpecification.findMany({
+        where: { itemId },
+        orderBy: { ordinal: 'asc' },
+      });
+    });
   }
 
   async dismissRiskFlag(user: AuthenticatedUser, prId: string, flagId: string, reason: string) {
