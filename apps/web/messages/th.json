@@ -1,0 +1,63 @@
+{
+  "nav": {
+    "appName": "AI Market",
+    "appTagline": "ผู้ช่วยพัสดุโรงเรียน",
+    "dashboard": "Dashboard",
+    "requests": "คำขอซื้อ",
+    "newRequest": "สร้างคำขอ",
+    "inbox": "Inbox พัสดุ",
+    "auditLogs": "Audit Logs",
+    "admin": "ตั้งค่าระบบ",
+    "profile": "โปรไฟล์",
+    "logout": "ออก"
+  },
+  "role": {
+    "REQUESTER": "ผู้ขอซื้อ",
+    "PROJECT_OWNER": "หัวหน้าโครงการ",
+    "PROCUREMENT": "เจ้าหน้าที่พัสดุ",
+    "FINANCE": "เจ้าหน้าที่การเงิน",
+    "INSPECTOR": "กรรมการตรวจรับ",
+    "DIRECTOR": "ผู้บริหาร",
+    "AUDITOR": "ผู้ตรวจสอบ",
+    "ADMIN": "ผู้ดูแลระบบ"
+  },
+  "prStatus": {
+    "DRAFT": "ร่าง",
+    "SUBMITTED": "ส่งเรื่องแล้ว",
+    "REVIEWING": "กำลังตรวจ",
+    "RETURNED": "ส่งกลับแก้ไข",
+    "APPROVED_FOR_COMPARISON": "อนุมัติเข้ารอบเปรียบเทียบ",
+    "IN_COMPARISON": "อยู่ระหว่างเปรียบเทียบราคา",
+    "PENDING_APPROVAL": "รออนุมัติ",
+    "APPROVED": "อนุมัติแล้ว",
+    "REJECTED": "ไม่อนุมัติ",
+    "IN_RECEIVING": "อยู่ระหว่างตรวจรับ",
+    "RECEIVED": "รับของแล้ว",
+    "CLOSED": "ปิดรายการ",
+    "CANCELLED": "ยกเลิก"
+  },
+  "auditAction": {
+    "auth.login": "เข้าสู่ระบบ",
+    "auth.logout": "ออกจากระบบ",
+    "purchase_request.create": "สร้างคำขอซื้อ",
+    "purchase_request.update": "แก้ไขคำขอซื้อ",
+    "purchase_request.submit": "ส่งเรื่อง",
+    "purchase_request.withdraw": "ถอนเรื่อง",
+    "purchase_request.claim": "รับเรื่องเข้าตรวจ",
+    "purchase_request.return": "ส่งกลับแก้ไข",
+    "purchase_request.approve_for_comparison": "อนุมัติเข้ารอบเปรียบเทียบ",
+    "purchase_request.dismiss_risk_flag": "ปิด risk flag",
+    "rule_config.create": "สร้าง rule config",
+    "rule_config.update": "แก้ rule config",
+    "rule_config.delete": "ลบ rule config",
+    "ai.parse_items": "AI: แยกรายการ",
+    "ai.parse_items_upload": "AI: แยกรายการจากไฟล์",
+    "ai.check_cloudiness": "AI: ตรวจความคลุมเครือ"
+  },
+  "entityType": {
+    "PurchaseRequest": "คำขอซื้อ",
+    "AiInvocation": "การเรียก AI",
+    "AiRiskFlag": "risk flag",
+    "RuleConfig": "rule config"
+  }
+}

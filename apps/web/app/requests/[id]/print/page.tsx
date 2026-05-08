@@ -1,8 +1,9 @@
 import { cookies } from 'next/headers';
 import { notFound } from 'next/navigation';
+import { getTranslations } from 'next-intl/server';
 import { requireUser } from '@/lib/auth';
 import { apiFetch, ApiError } from '@/lib/api';
-import { PR_STATUS_LABELS_TH, type PurchaseRequestStatus } from '@ai-market/shared';
+import { type PurchaseRequestStatus } from '@ai-market/shared';
 import { PrintTrigger } from './print-trigger';
 
 interface PrDetail {
@@ -57,6 +58,7 @@ export default async function PrintPrPage({
     if (err instanceof ApiError && err.status === 404) notFound();
     throw err;
   }
+  const tStatus = await getTranslations('prStatus');
 
   const total = pr.items.reduce((sum, it) => {
     const q = Number(it.quantity);
@@ -229,7 +231,7 @@ export default async function PrintPrPage({
         </section>
 
         <footer className="mt-8 border-t border-slate-300 pt-2 text-[10px] text-slate-500 print:fixed print:bottom-2 print:left-8 print:right-8">
-          เลขที่ {pr.docNo ?? '—'} · สถานะ {PR_STATUS_LABELS_TH[pr.status]} · พิมพ์เมื่อ{' '}
+          เลขที่ {pr.docNo ?? '—'} · สถานะ {tStatus(pr.status)} · พิมพ์เมื่อ{' '}
           {new Date().toLocaleString('th-TH')} · ระบบ AI Market
         </footer>
       </div>

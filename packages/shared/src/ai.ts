@@ -1,12 +1,13 @@
 import { z } from 'zod';
 
-export const ParseItemsInputTypeSchema = z.enum(['text', 'csv']);
+export const ParseItemsInputTypeSchema = z.enum(['text', 'csv', 'excel']);
 export type ParseItemsInputType = z.infer<typeof ParseItemsInputTypeSchema>;
 
 export const ParseItemsInputSchema = z.object({
   type: ParseItemsInputTypeSchema,
   content: z.string().min(1).max(20000),
   hint: z.string().max(500).optional(),
+  sourceFilename: z.string().max(255).optional(),
 });
 export type ParseItemsInput = z.infer<typeof ParseItemsInputSchema>;
 

@@ -1,10 +1,11 @@
 import Link from 'next/link';
 import { cookies } from 'next/headers';
 import { notFound } from 'next/navigation';
+import { getTranslations } from 'next-intl/server';
 import { requireUser } from '@/lib/auth';
 import { apiFetch, ApiError } from '@/lib/api';
 import { AppShell } from '@/components/app-shell';
-import { PR_STATUS_LABELS_TH, type PurchaseRequestStatus } from '@ai-market/shared';
+import { type PurchaseRequestStatus } from '@ai-market/shared';
 import { PrActions } from './actions';
 import { RiskFlagsPanel } from './risk-flags';
 
@@ -81,6 +82,7 @@ export default async function RequestDetailPage({
     if (err instanceof ApiError && err.status === 404) notFound();
     throw err;
   }
+  const tStatus = await getTranslations('prStatus');
 
   const isOwner = pr.requesterId === user.id;
   const isProcurement = user.roles.includes('PROCUREMENT') || user.roles.includes('ADMIN');
@@ -108,7 +110,7 @@ export default async function RequestDetailPage({
           <span
             className={`rounded-full px-3 py-1 text-xs font-medium ${statusBadgeClass(pr.status)}`}
           >
-            {PR_STATUS_LABELS_TH[pr.status]}
+            {tStatus(pr.status)}
           </span>
           {canEdit && (
             <Link

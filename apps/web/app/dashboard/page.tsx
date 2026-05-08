@@ -1,15 +1,11 @@
 import Link from 'next/link';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
+import { getTranslations } from 'next-intl/server';
 import { requireUser } from '@/lib/auth';
 import { apiFetch } from '@/lib/api';
 import { AppShell } from '@/components/app-shell';
-import {
-  AUDIT_ACTION_LABELS_TH,
-  ENTITY_TYPE_LABELS_TH,
-  PR_STATUS_LABELS_TH,
-  type PurchaseRequestStatus,
-} from '@ai-market/shared';
+import { type PurchaseRequestStatus } from '@ai-market/shared';
 
 interface DashboardData {
   generatedAt: string;
@@ -45,6 +41,16 @@ export default async function DashboardPage() {
   const data = await apiFetch<DashboardData>('/dashboard/director', {
     cookie: cookieStore.toString(),
   });
+  const tStatus = await getTranslations('prStatus');
+  const tAction = await getTranslations('auditAction');
+  const tEntity = await getTranslations('entityType');
+  const safe = (t: (k: string) => string, k: string) => {
+    try {
+      return t(k);
+    } catch {
+      return k;
+    }
+  };
 
   const totalRisk = data.riskCount.LOW + data.riskCount.MEDIUM + data.riskCount.HIGH;
   const monthLabel = new Date(data.monthStart).toLocaleDateString('th-TH', {
@@ -105,7 +111,7 @@ export default async function DashboardPage() {
                   <div key={status}>
                     <div className="flex items-center justify-between text-xs">
                       <span className="text-slate-700">
-                        {PR_STATUS_LABELS_TH[status as PurchaseRequestStatus] ?? status}
+                        {safe(tStatus, status)}
                       </span>
                       <span className="font-mono text-slate-500">{count}</span>
                     </div>
@@ -201,18 +207,18 @@ export default async function DashboardPage() {
                   <div className="text-sm text-slate-800">
                     <span className="font-medium">{a.userName ?? '—'}</span>{' '}
                     <span className="text-slate-600">
-                      {AUDIT_ACTION_LABELS_TH[a.action] ?? a.action}
+                      {safe(tAction, a.action)}
                     </span>{' '}
                     {a.entityType === 'PurchaseRequest' && a.entityId ? (
                       <Link
                         href={`/requests/${a.entityId}` as never}
                         className="text-brand-600 hover:underline"
                       >
-                        ({ENTITY_TYPE_LABELS_TH[a.entityType]})
+                        ({safe(tEntity, a.entityType)})
                       </Link>
                     ) : (
                       <span className="text-slate-500">
-                        ({ENTITY_TYPE_LABELS_TH[a.entityType] ?? a.entityType})
+                        ({safe(tEntity, a.entityType)})
                       </span>
                     )}
                   </div>

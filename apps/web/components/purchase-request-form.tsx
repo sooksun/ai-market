@@ -58,9 +58,11 @@ export function PurchaseRequestForm({
 
   const [parsing, setParsing] = useState(false);
   const [parseInput, setParseInput] = useState('');
+  const [parseFile, setParseFile] = useState<File | null>(null);
   const [parsePreview, setParsePreview] = useState<ParseItemsResponse | null>(null);
   const [parseError, setParseError] = useState<string | null>(null);
   const [parseMode, setParseMode] = useState<'append' | 'replace'>('replace');
+  const [parseTab, setParseTab] = useState<'text' | 'file'>('text');
 
   function updateItem(idx: number, patch: Partial<ItemRow>) {
     setItems((prev) => prev.map((it, i) => (i === idx ? { ...it, ...patch } : it)));
@@ -79,12 +81,27 @@ export function PurchaseRequestForm({
     setParsePreview(null);
     setParsing(true);
     try {
-      const res = await fetch(`${API_URL}/ai/parse-items`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: 'text', content: parseInput }),
-      });
+      let res: Response;
+      if (parseTab === 'file') {
+        if (!parseFile) {
+          setParseError('กรุณาเลือกไฟล์ก่อน');
+          return;
+        }
+        const fd = new FormData();
+        fd.append('file', parseFile);
+        res = await fetch(`${API_URL}/ai/parse-items/upload`, {
+          method: 'POST',
+          credentials: 'include',
+          body: fd,
+        });
+      } else {
+        res = await fetch(`${API_URL}/ai/parse-items`, {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ type: 'text', content: parseInput }),
+        });
+      }
       const body = await res.json();
       if (!res.ok) throw new Error(body?.error?.message ?? 'AI ไม่ตอบ');
       setParsePreview(body.data);
@@ -116,6 +133,7 @@ export function PurchaseRequestForm({
     }
     setParsePreview(null);
     setParseInput('');
+    setParseFile(null);
   }
 
   async function onSubmit(e: React.FormEvent) {
@@ -238,21 +256,69 @@ export function PurchaseRequestForm({
 
         <div className="mt-4 rounded-md border border-dashed border-brand-200 bg-brand-50/50 p-4">
           <p className="text-sm font-medium text-brand-700">✨ ให้ AI ช่วยแยกรายการ</p>
-          <p className="text-xs text-slate-600">
-            วางข้อความแบบรวม เช่น "ปากกา 10 ด้าม กระดาษ A4 5 รีม" แล้วให้ AI แยกเป็นรายการ
-          </p>
-          <textarea
-            value={parseInput}
-            onChange={(e) => setParseInput(e.target.value)}
-            rows={3}
-            className="mt-2 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"
-            placeholder="ปากกาน้ำเงิน 10 ด้าม กระดาษ A4 5 รีม ..."
-          />
+
+          <div className="mt-2 inline-flex rounded-md border border-slate-300 bg-white p-0.5 text-xs">
+            <button
+              type="button"
+              onClick={() => setParseTab('text')}
+              className={`rounded px-3 py-1 ${
+                parseTab === 'text'
+                  ? 'bg-brand-500 text-white'
+                  : 'text-slate-700 hover:bg-slate-100'
+              }`}
+            >
+              วางข้อความ
+            </button>
+            <button
+              type="button"
+              onClick={() => setParseTab('file')}
+              className={`rounded px-3 py-1 ${
+                parseTab === 'file'
+                  ? 'bg-brand-500 text-white'
+                  : 'text-slate-700 hover:bg-slate-100'
+              }`}
+            >
+              อัปโหลดไฟล์ (Excel / CSV)
+            </button>
+          </div>
+
+          {parseTab === 'text' ? (
+            <>
+              <p className="mt-2 text-xs text-slate-600">
+                วางข้อความแบบรวม เช่น "ปากกา 10 ด้าม กระดาษ A4 5 รีม"
+              </p>
+              <textarea
+                value={parseInput}
+                onChange={(e) => setParseInput(e.target.value)}
+                rows={3}
+                className="mt-2 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"
+                placeholder="ปากกาน้ำเงิน 10 ด้าม กระดาษ A4 5 รีม ..."
+              />
+            </>
+          ) : (
+            <>
+              <p className="mt-2 text-xs text-slate-600">
+                เลือกไฟล์ .xlsx .xls .csv หรือ .txt — ขนาดไม่เกิน 5MB · AI จะอ่าน sheet แรก
+              </p>
+              <input
+                type="file"
+                accept=".xlsx,.xls,.csv,.txt,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv,text/plain"
+                onChange={(e) => setParseFile(e.target.files?.[0] ?? null)}
+                className="mt-2 block w-full text-sm text-slate-700 file:mr-3 file:rounded-md file:border-0 file:bg-brand-50 file:px-3 file:py-1 file:text-xs file:font-medium file:text-brand-700 hover:file:bg-brand-100"
+              />
+              {parseFile && (
+                <p className="mt-1 text-xs text-slate-500">
+                  ไฟล์: {parseFile.name} ({(parseFile.size / 1024).toFixed(1)} KB)
+                </p>
+              )}
+            </>
+          )}
+
           <div className="mt-2 flex flex-wrap items-center gap-3">
             <button
               type="button"
               onClick={callAiParse}
-              disabled={!parseInput || parsing}
+              disabled={parsing || (parseTab === 'text' ? !parseInput : !parseFile)}
               className="rounded-md bg-brand-500 px-3 py-1 text-xs font-medium text-white hover:bg-brand-600 disabled:opacity-50"
             >
               {parsing ? 'กำลังให้ AI ช่วย...' : 'ให้ AI แยกรายการ'}

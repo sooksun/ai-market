@@ -1,21 +1,21 @@
 import Link from 'next/link';
+import { getTranslations } from 'next-intl/server';
 import type { CurrentUser, Role } from '@ai-market/shared';
-import { ROLE_LABELS_TH } from '@ai-market/shared';
 
 interface NavItem {
   href: string;
-  label: string;
+  labelKey: string;
   rolesAny?: Role[];
 }
 
 const NAV: NavItem[] = [
-  { href: '/dashboard', label: 'Dashboard', rolesAny: ['DIRECTOR', 'ADMIN'] },
-  { href: '/requests', label: 'คำขอซื้อ' },
-  { href: '/requests/new', label: 'สร้างคำขอ' },
-  { href: '/inbox', label: 'Inbox พัสดุ', rolesAny: ['PROCUREMENT', 'DIRECTOR', 'ADMIN'] },
-  { href: '/audit-logs', label: 'Audit Logs', rolesAny: ['AUDITOR', 'DIRECTOR', 'ADMIN'] },
-  { href: '/admin/rule-configs', label: 'ตั้งค่าระบบ', rolesAny: ['ADMIN'] },
-  { href: '/me', label: 'โปรไฟล์' },
+  { href: '/dashboard', labelKey: 'dashboard', rolesAny: ['DIRECTOR', 'ADMIN'] },
+  { href: '/requests', labelKey: 'requests' },
+  { href: '/requests/new', labelKey: 'newRequest' },
+  { href: '/inbox', labelKey: 'inbox', rolesAny: ['PROCUREMENT', 'DIRECTOR', 'ADMIN'] },
+  { href: '/audit-logs', labelKey: 'auditLogs', rolesAny: ['AUDITOR', 'DIRECTOR', 'ADMIN'] },
+  { href: '/admin/rule-configs', labelKey: 'admin', rolesAny: ['ADMIN'] },
+  { href: '/me', labelKey: 'profile' },
 ];
 
 function visibleFor(user: CurrentUser, item: NavItem): boolean {
@@ -23,14 +23,22 @@ function visibleFor(user: CurrentUser, item: NavItem): boolean {
   return user.roles.some((r) => item.rolesAny!.includes(r));
 }
 
-export function AppShell({ user, children }: { user: CurrentUser; children: React.ReactNode }) {
+export async function AppShell({
+  user,
+  children,
+}: {
+  user: CurrentUser;
+  children: React.ReactNode;
+}) {
+  const tNav = await getTranslations('nav');
+  const tRole = await getTranslations('role');
   const visibleNav = NAV.filter((n) => visibleFor(user, n));
   return (
     <div className="flex min-h-screen">
       <aside className="hidden w-60 border-r border-slate-200 bg-white md:block">
         <div className="border-b border-slate-200 px-4 py-4">
-          <p className="text-base font-semibold text-brand-500">AI Market</p>
-          <p className="text-xs text-slate-500">ผู้ช่วยพัสดุโรงเรียน</p>
+          <p className="text-base font-semibold text-brand-500">{tNav('appName')}</p>
+          <p className="text-xs text-slate-500">{tNav('appTagline')}</p>
         </div>
         <nav className="px-2 py-4">
           {visibleNav.map((n) => (
@@ -39,7 +47,7 @@ export function AppShell({ user, children }: { user: CurrentUser; children: Reac
               href={n.href as never}
               className="block rounded-md px-3 py-2 text-sm text-slate-700 hover:bg-slate-100"
             >
-              {n.label}
+              {tNav(n.labelKey)}
             </Link>
           ))}
         </nav>
@@ -54,13 +62,13 @@ export function AppShell({ user, children }: { user: CurrentUser; children: Reac
                   key={r}
                   className="rounded-full bg-brand-50 px-2 py-0.5 text-xs text-brand-700"
                 >
-                  {ROLE_LABELS_TH[r]}
+                  {tRole(r)}
                 </span>
               ))}
             </div>
             <form action="/api/logout" method="post">
               <button className="rounded-md border border-slate-300 px-3 py-1 text-xs text-slate-700 hover:bg-slate-100">
-                ออก
+                {tNav('logout')}
               </button>
             </form>
           </div>

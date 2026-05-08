@@ -127,8 +127,14 @@ export class ParseItemsService {
 
   private buildUserMessage(input: ParseItemsInput): string {
     const hint = input.hint ? `\n\nข้อมูลเพิ่มเติม: ${input.hint}` : '';
+    const source = input.sourceFilename
+      ? `\n\nที่มา: ไฟล์ "${input.sourceFilename}"`
+      : '';
     if (input.type === 'csv') {
-      return `แยกรายการพัสดุจาก CSV ต่อไปนี้ (อาจมี header):\n\`\`\`csv\n${input.content}\n\`\`\`${hint}`;
+      return `แยกรายการพัสดุจาก CSV ต่อไปนี้ (อาจมี header):\n\`\`\`csv\n${input.content}\n\`\`\`${source}${hint}`;
+    }
+    if (input.type === 'excel') {
+      return `แยกรายการพัสดุจากตาราง Excel ต่อไปนี้ (TSV — แท็บคั่นคอลัมน์, แถวแรกอาจเป็น header):\n\`\`\`tsv\n${input.content}\n\`\`\`${source}${hint}`;
     }
     return `แยกรายการพัสดุจากข้อความต่อไปนี้:\n"""\n${input.content}\n"""${hint}`;
   }

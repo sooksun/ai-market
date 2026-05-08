@@ -1,5 +1,6 @@
 import { cookies } from 'next/headers';
 import { notFound, redirect } from 'next/navigation';
+import { getTranslations } from 'next-intl/server';
 import { requireUser } from '@/lib/auth';
 import { apiFetch, ApiError } from '@/lib/api';
 import { AppShell } from '@/components/app-shell';
@@ -8,7 +9,6 @@ import {
   type ItemRow,
 } from '@/components/purchase-request-form';
 import {
-  PR_STATUS_LABELS_TH,
   type BudgetSourceSummary,
   type ProjectSummary,
   type PurchaseRequestStatus,
@@ -59,6 +59,7 @@ export default async function EditRequestPage({
     apiFetch<ProjectSummary[]>('/projects', { cookie }),
     apiFetch<BudgetSourceSummary[]>('/budget-sources', { cookie }),
   ]);
+  const tStatus = await getTranslations('prStatus');
 
   // Owner-only
   if (pr.requesterId !== user.id) {
@@ -72,7 +73,7 @@ export default async function EditRequestPage({
         <div className="rounded-md border border-amber-200 bg-amber-50 p-6 text-sm text-amber-800">
           <h1 className="text-base font-semibold">แก้ไขไม่ได้ในสถานะนี้</h1>
           <p className="mt-1">
-            คำขอนี้อยู่ในสถานะ <strong>{PR_STATUS_LABELS_TH[pr.status]}</strong> —
+            คำขอนี้อยู่ในสถานะ <strong>{tStatus(pr.status)}</strong> —
             แก้ไขได้เฉพาะ DRAFT หรือ RETURNED เท่านั้น
           </p>
           <a
@@ -102,7 +103,7 @@ export default async function EditRequestPage({
           <p className="font-mono text-xs text-slate-500">{pr.docNo ?? '— (ยังไม่ได้ส่งเรื่อง)'}</p>
           <h1 className="text-xl font-semibold text-slate-800">แก้ไขคำขอซื้อ</h1>
           <p className="mt-1 text-xs text-slate-500">
-            สถานะปัจจุบัน: {PR_STATUS_LABELS_TH[pr.status]}
+            สถานะปัจจุบัน: {tStatus(pr.status)}
           </p>
         </div>
       </div>

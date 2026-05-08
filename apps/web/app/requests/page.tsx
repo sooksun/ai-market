@@ -1,9 +1,10 @@
 import Link from 'next/link';
 import { cookies } from 'next/headers';
+import { getTranslations } from 'next-intl/server';
 import { requireUser } from '@/lib/auth';
 import { apiFetch } from '@/lib/api';
 import { AppShell } from '@/components/app-shell';
-import { PR_STATUS_LABELS_TH, type PurchaseRequestStatus } from '@ai-market/shared';
+import { type PurchaseRequestStatus } from '@ai-market/shared';
 
 interface PrListItem {
   id: string;
@@ -26,6 +27,7 @@ export default async function RequestsPage() {
   const list = await apiFetch<PrListResponse>('/purchase-requests?pageSize=20', {
     cookie: cookieStore.toString(),
   });
+  const tStatus = await getTranslations('prStatus');
 
   return (
     <AppShell user={user}>
@@ -69,7 +71,7 @@ export default async function RequestsPage() {
                 </td>
                 <td className="px-4 py-3">
                   <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs">
-                    {PR_STATUS_LABELS_TH[pr.status]}
+                    {tStatus(pr.status)}
                   </span>
                 </td>
                 <td className="px-4 py-3">{pr._count.items}</td>

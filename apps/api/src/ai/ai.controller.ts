@@ -1,4 +1,14 @@
-import { Body, Controller, Post, UseGuards, UseInterceptors } from '@nestjs/common';
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Post,
+  Query,
+  UploadedFile,
+  UseGuards,
+  UseInterceptors,
+} from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import {
   ParseItemsInputSchema,
   CheckCloudinessInputSchema,
@@ -7,6 +17,7 @@ import {
 } from '@ai-market/shared';
 import { ParseItemsService } from './services/parse-items.service';
 import { CloudinessService } from './services/cloudiness.service';
+import { FileParserService } from './services/file-parser.service';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
@@ -15,6 +26,8 @@ import { CurrentUser, type AuthenticatedUser } from '../common/decorators/curren
 import { AuditAction } from '../common/decorators/audit-action.decorator';
 import { AuditInterceptor } from '../common/interceptors/audit.interceptor';
 
+const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
+
 @Controller('ai')
 @UseGuards(JwtAuthGuard, RolesGuard)
 @UseInterceptors(AuditInterceptor)
@@ -22,6 +35,7 @@ export class AiController {
   constructor(
     private parseItems: ParseItemsService,
     private cloudiness: CloudinessService,
+    private fileParser: FileParserService,
   ) {}
 
   @Post('parse-items')
@@ -31,6 +45,29 @@ export class AiController {
     @Body(new ZodValidationPipe(ParseItemsInputSchema)) body: ParseItemsInput,
   ) {
     return this.parseItems.parse(user, body);
+  }
+
+  @Post('parse-items/upload')
+  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: MAX_UPLOAD_BYTES } }))
+  @AuditAction({ action: 'ai.parse_items_upload', entityType: 'AiInvocation' })
+  async parseUpload(
+    @CurrentUser() user: AuthenticatedUser,
+    @UploadedFile() file: Express.Multer.File | undefined,
+    @Query('hint') hint?: string,
+  ) {
+    if (!file) {
+      throw new BadRequestException({
+        code: 'FILE_REQUIRED',
+        message: 'ต้องแนบไฟล์ใน field "file"',
+      });
+    }
+    const parsed = await this.fileParser.parse(file);
+    return this.parseItems.parse(user, {
+      type: parsed.type,
+      content: parsed.content,
+      sourceFilename: file.originalname,
+      hint: hint && hint.length <= 500 ? hint : undefined,
+    });
   }
 
   @Roles('PROCUREMENT', 'DIRECTOR', 'ADMIN')

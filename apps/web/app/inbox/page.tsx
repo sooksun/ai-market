@@ -4,10 +4,7 @@ import { redirect } from 'next/navigation';
 import { requireUser } from '@/lib/auth';
 import { apiFetch } from '@/lib/api';
 import { AppShell } from '@/components/app-shell';
-import {
-  PR_STATUS_LABELS_TH,
-  type PurchaseRequestStatus,
-} from '@ai-market/shared';
+import { type PurchaseRequestStatus } from '@ai-market/shared';
 
 interface PrListItem {
   id: string;

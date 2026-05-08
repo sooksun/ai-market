@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { AiController } from './ai.controller';
 import { ParseItemsService } from './services/parse-items.service';
 import { CloudinessService } from './services/cloudiness.service';
+import { FileParserService } from './services/file-parser.service';
 import { AiInvocationService } from './ai-invocation.service';
 import { ANTHROPIC, createAnthropic } from './anthropic.client';
 
@@ -11,6 +12,7 @@ import { ANTHROPIC, createAnthropic } from './anthropic.client';
   providers: [
     ParseItemsService,
     CloudinessService,
+    FileParserService,
     AiInvocationService,
     {
       provide: ANTHROPIC,

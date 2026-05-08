@@ -1,11 +1,19 @@
 'use client';
 
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3100/api/v1';
 
 export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginForm />
+    </Suspense>
+  );
+}
+
+function LoginForm() {
   const router = useRouter();
   const params = useSearchParams();
   const [email, setEmail] = useState('requester@test.local');
@@ -29,7 +37,7 @@ export default function LoginPage() {
         throw new Error(body?.error?.message ?? `เข้าสู่ระบบไม่สำเร็จ (${res.status})`);
       }
       const next = params.get('next') ?? '/requests';
-      router.push(next);
+      router.push(next as never);
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'เกิดข้อผิดพลาด');

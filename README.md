@@ -102,13 +102,14 @@ Phase 1 vertical slice พร้อมใช้งาน:
 - ✓ Director dashboard: `GET /dashboard/director` (summary cards, status breakdown, risk severity, top requesters, AI usage, recent activity)
 - ✓ Project / BudgetSource (Phase 1.8 placeholder): `GET /projects`, `GET /budget-sources` (read-only list) + ผูกใน PR ผ่าน `projectId` / `budgetSourceId`
 - ✓ Rule Configs CRUD (ADMIN only): `GET/POST/PATCH/DELETE /rule-configs` + audit log อัตโนมัติ
+- ✓ AI parse-items รับ Excel / CSV: `POST /ai/parse-items/upload` (multipart, multer, สูงสุด 5MB · sheet แรก)
+- ✓ i18n via next-intl (locale=th, messages/th.json) — label constants ย้ายเข้า messages แล้ว
 - ✓ Web: `/login`, `/dashboard`, `/requests`, `/requests/new`, `/requests/[id]` (detail + Excel + Print buttons), `/requests/[id]/edit`, `/requests/[id]/print`, `/inbox`, `/audit-logs`, `/admin/rule-configs` (ADMIN), `/me`
 
 ยังต้องทำใน Phase 1 (ถ้าต้องการ):
 - Refresh token rotation (ปัจจุบันแค่ verify + reissue)
 - Server-side PDF render via Puppeteer / @react-pdf (ตอนนี้ใช้ browser print)
-- รับ Excel/CSV upload ใน `/ai/parse-items` (ตอนนี้รับเฉพาะ text)
-- next-intl และ CSRF token
+- CSRF token (ตอนนี้ใช้แค่ httpOnly + SameSite=Lax)
 
 ## ภาษา
 

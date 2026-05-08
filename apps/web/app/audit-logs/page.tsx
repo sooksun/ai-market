@@ -1,9 +1,9 @@
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
+import { getTranslations } from 'next-intl/server';
 import { requireUser } from '@/lib/auth';
 import { apiFetch } from '@/lib/api';
 import { AppShell } from '@/components/app-shell';
-import { AUDIT_ACTION_LABELS_TH, ENTITY_TYPE_LABELS_TH } from '@ai-market/shared';
 import { AuditLogFilters } from './filters';
 import { AuditLogRow } from './row';
 
@@ -55,6 +55,22 @@ export default async function AuditLogsPage({
   const list = await apiFetch<AuditListResponse>(`/audit-logs?${qs.toString()}`, {
     cookie: cookieStore.toString(),
   });
+  const tAction = await getTranslations('auditAction');
+  const tEntity = await getTranslations('entityType');
+  const labelAction = (a: string): string => {
+    try {
+      return tAction(a);
+    } catch {
+      return a;
+    }
+  };
+  const labelEntity = (e: string): string => {
+    try {
+      return tEntity(e);
+    } catch {
+      return e;
+    }
+  };
 
   return (
     <AppShell user={user}>
@@ -98,8 +114,8 @@ export default async function AuditLogsPage({
               <AuditLogRow
                 key={log.id}
                 log={log}
-                actionLabel={AUDIT_ACTION_LABELS_TH[log.action] ?? log.action}
-                entityLabel={ENTITY_TYPE_LABELS_TH[log.entityType] ?? log.entityType}
+                actionLabel={labelAction(log.action)}
+                entityLabel={labelEntity(log.entityType)}
               />
             ))}
           </tbody>
