@@ -1,0 +1,316 @@
+// AI Market — Prisma schema
+// Phase 0 (Foundation) only. Next phases will be added per migration step.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────
+// Enums
+// ─────────────────────────────────────────────
+
+enum Role {
+  REQUESTER
+  PROJECT_OWNER
+  PROCUREMENT
+  FINANCE
+  INSPECTOR
+  DIRECTOR
+  AUDITOR
+  ADMIN
+}
+
+enum PurchaseRequestStatus {
+  DRAFT
+  SUBMITTED
+  REVIEWING
+  RETURNED
+  APPROVED_FOR_COMPARISON
+  IN_COMPARISON
+  PENDING_APPROVAL
+  APPROVED
+  REJECTED
+  IN_RECEIVING
+  RECEIVED
+  CLOSED
+  CANCELLED
+}
+
+enum ItemClass {
+  MATERIAL
+  ASSET
+  SERVICE
+  UNCLASSIFIED
+}
+
+enum SpecLevel {
+  MUST_HAVE
+  NICE_TO_HAVE
+  INFO
+}
+
+enum SpecSource {
+  HUMAN
+  AI
+}
+
+enum RiskSeverity {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum RiskType {
+  AMBIGUOUS_SPEC
+  BRAND_LOCK
+  PRICE_OUTLIER
+  INSUFFICIENT_QUOTES
+  MISSING_DOC
+  BUDGET_OVERRUN
+  REASON_MISSING
+  CLASSIFICATION_UNCERTAIN
+  OTHER
+}
+
+// ─────────────────────────────────────────────
+// Models
+// ─────────────────────────────────────────────
+
+model School {
+  id        String    @id @default(cuid())
+  name      String
+  shortName String?   @map("short_name")
+  taxId     String?   @map("tax_id")
+  address   String?   @db.Text
+  phone     String?
+  active    Boolean   @default(true)
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  users            User[]
+  rules            RuleConfig[]
+  auditLogs        AuditLog[]
+  purchaseRequests PurchaseRequest[]
+  attachments      Attachment[]
+
+  @@map("schools")
+}
+
+model User {
+  id           String    @id @default(cuid())
+  schoolId     String    @map("school_id")
+  email        String    @unique
+  passwordHash String    @map("password_hash")
+  fullName     String    @map("full_name")
+  phone        String?
+  active       Boolean   @default(true)
+  lastLoginAt  DateTime? @map("last_login_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  deletedAt    DateTime? @map("deleted_at")
+
+  school           School            @relation(fields: [schoolId], references: [id])
+  roles            UserRole[]
+  auditLogs        AuditLog[]
+  ruleUpdates      RuleConfig[]      @relation("RuleUpdater")
+  purchaseRequests PurchaseRequest[] @relation("RequesterRequests")
+
+  @@index([schoolId])
+  @@map("users")
+}
+
+model UserRole {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  role      Role
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, role])
+  @@map("user_roles")
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  schoolId   String?  @map("school_id")
+  userId     String?  @map("user_id")
+  action     String
+  entityType String   @map("entity_type")
+  entityId   String?  @map("entity_id")
+  before     Json?
+  after      Json?
+  ip         String?
+  userAgent  String?  @map("user_agent") @db.Text
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  school School? @relation(fields: [schoolId], references: [id])
+  user   User?   @relation(fields: [userId], references: [id])
+
+  @@index([schoolId, entityType, entityId])
+  @@index([userId, createdAt])
+  @@index([action, createdAt])
+  @@map("audit_logs")
+}
+
+model RuleConfig {
+  id          String   @id @default(cuid())
+  schoolId    String?  @map("school_id")
+  key         String
+  value       Json
+  type        String
+  description String?  @db.Text
+  updatedById String?  @map("updated_by_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  school    School? @relation(fields: [schoolId], references: [id])
+  updatedBy User?   @relation("RuleUpdater", fields: [updatedById], references: [id])
+
+  @@unique([schoolId, key])
+  @@map("rule_configs")
+}
+
+model AiInvocation {
+  id            String   @id @default(cuid())
+  schoolId      String?  @map("school_id")
+  userId        String?  @map("user_id")
+  endpoint      String
+  model         String
+  promptVersion String   @map("prompt_version")
+  input         Json
+  output        Json?
+  tokenInput    Int?     @map("token_input")
+  tokenOutput   Int?     @map("token_output")
+  latencyMs     Int?     @map("latency_ms")
+  status        String
+  errorMessage  String?  @map("error_message") @db.Text
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@index([endpoint, createdAt])
+  @@index([userId, createdAt])
+  @@map("ai_invocations")
+}
+
+// ─────────────────────────────────────────────
+// Phase 1 — Purchase Request
+// ─────────────────────────────────────────────
+
+model PurchaseRequest {
+  id          String                @id @default(cuid())
+  schoolId    String                @map("school_id")
+  docNo       String?               @map("doc_no")
+  title       String
+  reason      String                @db.Text
+  status      PurchaseRequestStatus @default(DRAFT)
+  requesterId String                @map("requester_id")
+  totalAmount Decimal?              @map("total_amount") @db.Decimal(15, 2)
+
+  submittedAt DateTime? @map("submitted_at")
+  approvedAt  DateTime? @map("approved_at")
+  closedAt    DateTime? @map("closed_at")
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  school    School                @relation(fields: [schoolId], references: [id])
+  requester User                  @relation("RequesterRequests", fields: [requesterId], references: [id])
+  items     PurchaseRequestItem[]
+  riskFlags AiRiskFlag[]
+
+  @@unique([schoolId, docNo])
+  @@index([schoolId, status, createdAt])
+  @@index([requesterId, createdAt])
+  @@map("purchase_requests")
+}
+
+model PurchaseRequestItem {
+  id                String    @id @default(cuid())
+  purchaseRequestId String    @map("purchase_request_id")
+  ordinal           Int
+  name              String
+  quantity          Decimal   @db.Decimal(12, 2)
+  unit              String
+  unitPriceEst      Decimal?  @map("unit_price_est") @db.Decimal(15, 2)
+  rawText           String?   @map("raw_text") @db.Text
+  parsedByAi        Boolean   @default(false) @map("parsed_by_ai")
+  classifiedType    ItemClass @default(UNCLASSIFIED) @map("classified_type")
+  classifiedByAi    Boolean   @default(false) @map("classified_by_ai")
+  notes             String?   @db.Text
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  purchaseRequest PurchaseRequest     @relation(fields: [purchaseRequestId], references: [id], onDelete: Cascade)
+  specifications  ItemSpecification[]
+  riskFlags       AiRiskFlag[]
+
+  @@unique([purchaseRequestId, ordinal])
+  @@index([purchaseRequestId])
+  @@map("purchase_request_items")
+}
+
+model ItemSpecification {
+  id        String     @id @default(cuid())
+  itemId    String     @map("item_id")
+  key       String
+  value     String     @db.Text
+  level     SpecLevel  @default(MUST_HAVE)
+  source    SpecSource @default(HUMAN)
+  ordinal   Int        @default(0)
+  createdAt DateTime   @default(now()) @map("created_at")
+  updatedAt DateTime   @updatedAt @map("updated_at")
+
+  item PurchaseRequestItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@index([itemId])
+  @@map("item_specifications")
+}
+
+model AiRiskFlag {
+  id                String    @id @default(cuid())
+  purchaseRequestId String?   @map("purchase_request_id")
+  itemId            String?   @map("item_id")
+  type              RiskType
+  severity          RiskSeverity @default(MEDIUM)
+  message           String    @db.Text
+  detail            Json?
+  modelVersion      String?   @map("model_version")
+  invocationId      String?   @map("invocation_id")
+  dismissedById     String?   @map("dismissed_by_id")
+  dismissedAt       DateTime? @map("dismissed_at")
+  dismissedReason   String?   @map("dismissed_reason") @db.Text
+  createdAt         DateTime  @default(now()) @map("created_at")
+
+  purchaseRequest PurchaseRequest?     @relation(fields: [purchaseRequestId], references: [id], onDelete: Cascade)
+  item            PurchaseRequestItem? @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@index([purchaseRequestId])
+  @@index([itemId])
+  @@index([type, severity])
+  @@map("ai_risk_flags")
+}
+
+model Attachment {
+  id           String   @id @default(cuid())
+  schoolId     String   @map("school_id")
+  ownerType    String   @map("owner_type")
+  ownerId      String   @map("owner_id")
+  filename     String
+  mimeType     String   @map("mime_type")
+  sizeBytes    Int      @map("size_bytes")
+  storagePath  String   @map("storage_path")
+  uploadedById String?  @map("uploaded_by_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  school School @relation(fields: [schoolId], references: [id])
+
+  @@index([schoolId, ownerType, ownerId])
+  @@map("attachments")
+}
