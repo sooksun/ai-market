@@ -1,8 +1,11 @@
 import {
   ConflictException,
   ForbiddenException,
+  Inject,
   Injectable,
+  Logger,
   NotFoundException,
+  forwardRef,
 } from '@nestjs/common';
 import { Prisma, PurchaseRequestStatus } from '@ai-market/db';
 import type {
@@ -10,6 +13,7 @@ import type {
   UpdateQuotationInput,
 } from '@ai-market/shared';
 import { PrismaService } from '../prisma/prisma.service';
+import { ApprovalsService } from '../approvals/approvals.service';
 import type { AuthenticatedUser } from '../common/decorators/current-user.decorator';
 
 const COMPARISON_STATUSES: PurchaseRequestStatus[] = [
@@ -19,7 +23,12 @@ const COMPARISON_STATUSES: PurchaseRequestStatus[] = [
 
 @Injectable()
 export class QuotationsService {
-  constructor(private prisma: PrismaService) {}
+  private readonly logger = new Logger(QuotationsService.name);
+  constructor(
+    private prisma: PrismaService,
+    @Inject(forwardRef(() => ApprovalsService))
+    private approvals: ApprovalsService,
+  ) {}
 
   async listForPr(user: AuthenticatedUser, prId: string) {
     const pr = await this.assertPrInScope(user, prId);
@@ -201,7 +210,7 @@ export class QuotationsService {
       throw new NotFoundException({ code: 'NOT_FOUND', message: 'ไม่พบใบเสนอราคา' });
     }
 
-    return this.prisma.$transaction(async (tx) => {
+    const result = await this.prisma.$transaction(async (tx) => {
       // Mark all other quotations as REJECTED.
       await tx.vendorQuotation.updateMany({
         where: {
@@ -226,6 +235,17 @@ export class QuotationsService {
       });
       return updated;
     });
+
+    // Auto-start approval workflow once vendor selection is confirmed.
+    try {
+      await this.approvals.start(user.schoolId, prId);
+    } catch (err) {
+      this.logger.warn(
+        `auto-start workflow failed for PR ${prId}: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
+
+    return result;
   }
 
   // ───────────────── Helpers ─────────────────

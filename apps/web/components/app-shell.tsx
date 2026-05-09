@@ -57,7 +57,7 @@ const NAV: NavDef[] = [
     labelKey: 'approval',
     icon: 'user-check',
     group: 'ops',
-    comingSoon: true,
+    rolesAny: ['PROJECT_OWNER', 'PROCUREMENT', 'FINANCE', 'DIRECTOR', 'ADMIN'],
   },
   {
     href: '/receiving',

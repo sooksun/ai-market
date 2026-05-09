@@ -6,3 +6,4 @@ export * from './audit';
 export * from './rule-config';
 export * from './budget';
 export * from './vendor';
+export * from './approval';

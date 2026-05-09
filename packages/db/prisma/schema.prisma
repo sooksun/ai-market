@@ -328,6 +328,7 @@ model PurchaseRequest {
   items        PurchaseRequestItem[]
   riskFlags    AiRiskFlag[]
   quotations   VendorQuotation[]
+  approval     ApprovalWorkflow?
 
   @@unique([schoolId, docNo])
   @@index([schoolId, status, createdAt])
@@ -402,6 +403,65 @@ model AiRiskFlag {
   @@index([itemId])
   @@index([type, severity])
   @@map("ai_risk_flags")
+}
+
+// ─────────────────────────────────────────────
+// Phase 3.3 — Approval workflow
+// ─────────────────────────────────────────────
+
+enum ApprovalWorkflowStatus {
+  IN_PROGRESS
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+enum ApprovalStepStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  RETURNED
+  SKIPPED
+}
+
+model ApprovalWorkflow {
+  id                String                 @id @default(cuid())
+  schoolId          String                 @map("school_id")
+  purchaseRequestId String                 @unique @map("purchase_request_id")
+  template          String?
+  currentStep       Int                    @default(1) @map("current_step")
+  status            ApprovalWorkflowStatus @default(IN_PROGRESS)
+  startedAt         DateTime               @default(now()) @map("started_at")
+  completedAt       DateTime?              @map("completed_at")
+  createdAt         DateTime               @default(now()) @map("created_at")
+  updatedAt         DateTime               @updatedAt @map("updated_at")
+
+  purchaseRequest PurchaseRequest @relation(fields: [purchaseRequestId], references: [id], onDelete: Cascade)
+  steps           ApprovalStep[]
+
+  @@index([schoolId, status])
+  @@map("approval_workflows")
+}
+
+model ApprovalStep {
+  id           String             @id @default(cuid())
+  workflowId   String             @map("workflow_id")
+  ordinal      Int
+  title        String
+  approverRole Role?              @map("approver_role")
+  approverId   String?            @map("approver_id")
+  status       ApprovalStepStatus @default(PENDING)
+  comment      String?            @db.Text
+  decidedById  String?            @map("decided_by_id")
+  decidedAt    DateTime?          @map("decided_at")
+  createdAt    DateTime           @default(now()) @map("created_at")
+
+  workflow ApprovalWorkflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+
+  @@unique([workflowId, ordinal])
+  @@index([workflowId])
+  @@index([approverRole, status])
+  @@map("approval_steps")
 }
 
 // ─────────────────────────────────────────────

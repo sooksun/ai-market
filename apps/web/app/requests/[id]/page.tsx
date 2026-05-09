@@ -15,6 +15,26 @@ import { BudgetBar } from '@/components/ui/budget-bar';
 import { fmtNum } from '@/components/ui/format';
 import { PrActions } from './actions';
 import { RiskFlagsPanel } from './risk-flags';
+import { ApprovalPanel } from './approval-panel';
+import type { ApprovalStepStatus, ApprovalWorkflowStatus, Role } from '@ai-market/shared';
+
+interface ApprovalStepLite {
+  id: string;
+  ordinal: number;
+  title: string;
+  approverRole: Role | null;
+  status: ApprovalStepStatus;
+  comment: string | null;
+  decidedAt: string | null;
+}
+interface ApprovalWorkflowLite {
+  id: string;
+  status: ApprovalWorkflowStatus;
+  currentStep: number;
+  startedAt: string;
+  completedAt: string | null;
+  steps: ApprovalStepLite[];
+}
 
 interface BudgetSummaryRow {
   id: string;
@@ -135,6 +155,17 @@ export default async function RequestDetailPage({
     } catch {
       // ignore — non-critical
     }
+  }
+
+  // Approval workflow (only present once vendor selection happens)
+  let workflow: ApprovalWorkflowLite | null = null;
+  try {
+    workflow = await apiFetch<ApprovalWorkflowLite | null>(
+      `/purchase-requests/${id}/approval`,
+      { cookie },
+    );
+  } catch {
+    workflow = null;
   }
 
   const isOwner = pr.requesterId === user.id;
@@ -346,6 +377,9 @@ export default async function RequestDetailPage({
           </div>
 
           <aside className="space-y-5">
+            {workflow && (
+              <ApprovalPanel prId={pr.id} workflow={workflow} userRoles={user.roles} />
+            )}
             {budgetMatch && (
               <Card className="p-5">
                 <SectionTitle

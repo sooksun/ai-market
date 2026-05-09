@@ -70,6 +70,19 @@ async function main() {
       },
       description: 'เอกสารที่ต้องมีตามวิธีจัดซื้อ',
     },
+    {
+      key: 'approval_workflow_default',
+      type: 'workflow',
+      value: {
+        steps: [
+          { title: 'หัวหน้ากลุ่มสาระ/แผนก', approverRole: 'PROJECT_OWNER' },
+          { title: 'เจ้าหน้าที่พัสดุ', approverRole: 'PROCUREMENT' },
+          { title: 'หัวหน้างานการเงิน', approverRole: 'FINANCE' },
+          { title: 'ผู้อำนวยการ', approverRole: 'DIRECTOR' },
+        ],
+      },
+      description: 'สายอนุมัติเริ่มต้นสำหรับคำขอซื้อทั่วไป',
+    },
   ];
 
   for (const r of ruleSeeds) {
