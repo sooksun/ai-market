@@ -6,6 +6,7 @@ export interface AuthenticatedUser {
   email: string;
   fullName: string;
   schoolId: string;
+  homeSchoolId: string;
   roles: Role[];
 }
 

@@ -9,6 +9,7 @@ export const RoleSchema = z.enum([
   'DIRECTOR',
   'AUDITOR',
   'ADMIN',
+  'SUPERADMIN',
 ]);
 
 export type Role = z.infer<typeof RoleSchema>;
@@ -22,4 +23,5 @@ export const ROLE_LABELS_TH: Record<Role, string> = {
   DIRECTOR: 'ผู้บริหาร',
   AUDITOR: 'ผู้ตรวจสอบ',
   ADMIN: 'ผู้ดูแลระบบ',
+  SUPERADMIN: 'ผู้ดูแลระดับเขต',
 };

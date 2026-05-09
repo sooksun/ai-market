@@ -13,3 +13,4 @@ export * from './receiving';
 export * from './inventory';
 export * from './voucher';
 export * from './audit-scan';
+export * from './tenant';

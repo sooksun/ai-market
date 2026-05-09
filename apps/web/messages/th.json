@@ -39,7 +39,8 @@
     "INSPECTOR": "กรรมการตรวจรับ",
     "DIRECTOR": "ผู้บริหาร",
     "AUDITOR": "ผู้ตรวจสอบ",
-    "ADMIN": "ผู้ดูแลระบบ"
+    "ADMIN": "ผู้ดูแลระบบ",
+    "SUPERADMIN": "ผู้ดูแลระดับเขต"
   },
   "prStatus": {
     "DRAFT": "ร่าง",
@@ -59,7 +60,8 @@
   "auditAction": {
     "auth": {
       "login": "เข้าสู่ระบบ",
-      "logout": "ออกจากระบบ"
+      "logout": "ออกจากระบบ",
+      "switch_tenant": "สลับโรงเรียน"
     },
     "purchase_request": {
       "create": "สร้างคำขอซื้อ",
@@ -111,6 +113,8 @@
     "Project": "โครงการ",
     "BudgetSource": "แหล่งงบ",
     "Budget": "งบ allocation",
-    "AuditScan": "การสแกน AI Audit"
+    "AuditScan": "การสแกน AI Audit",
+    "Tenant": "โรงเรียน",
+    "School": "โรงเรียน"
   }
 }

@@ -6,10 +6,8 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   Bell,
-  Building2,
   CheckIcon,
   ChevronRight,
-  ChevronsUpDown,
   Moon,
   PanelLeft,
   Plus,
@@ -22,6 +20,7 @@ import {
 import * as Lucide from 'lucide-react';
 import { Avatar } from './ui/avatar';
 import { classNames } from './ui/format';
+import { TenantSwitcher } from './tenant-switcher';
 
 export interface NavItemResolved {
   href: string;
@@ -74,7 +73,6 @@ export function AppShellClient({
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
   const [copilotOpen, setCopilotOpen] = useState(false);
-  const [tenantOpen, setTenantOpen] = useState(false);
   const [dark, setDark] = useState(false);
 
   useEffect(() => {
@@ -220,48 +218,7 @@ export function AppShellClient({
             <PanelLeft className="w-4 h-4" strokeWidth={1.75} />
           </button>
 
-          <div className="relative">
-            <button
-              type="button"
-              onClick={() => setTenantOpen((o) => !o)}
-              className="flex items-center gap-2.5 pl-2.5 pr-3 py-1.5 rounded-xl bg-white dark:bg-ink-800/60 border border-ink-200 dark:border-white/10 hover:border-brand-300 dark:hover:border-brand-700 transition-colors text-left"
-            >
-              <span className="grid place-items-center w-7 h-7 rounded-lg grad-brand text-white shrink-0">
-                <Building2 className="w-3.5 h-3.5" strokeWidth={2} />
-              </span>
-              <div className="min-w-0 max-w-[210px]">
-                <div className="text-[12.5px] font-semibold text-ink-900 dark:text-white truncate leading-tight">
-                  {user.schoolId}
-                </div>
-                <div className="text-[10.5px] text-ink-400 dark:text-ink-300 truncate leading-tight">
-                  ปีงบประมาณปัจจุบัน
-                </div>
-              </div>
-              <ChevronsUpDown className="w-3.5 h-3.5 text-ink-400 dark:text-ink-300 shrink-0" />
-            </button>
-            {tenantOpen && (
-              <div className="absolute top-full mt-2 left-0 w-[320px] rounded-2xl bg-white dark:bg-ink-800 border border-ink-200 dark:border-white/10 shadow-pop z-40 overflow-hidden fade-up p-4">
-                <div className="text-[11px] uppercase tracking-wider font-semibold text-ink-400 dark:text-ink-300 mb-2">
-                  Multi-tenant (เร็ว ๆ นี้)
-                </div>
-                <p className="text-xs text-ink-600 dark:text-ink-200">
-                  ปัจจุบันใช้ school_id เดียว: <code className="font-mono">{user.schoolId}</code>
-                </p>
-                <p className="mt-2 text-[11px] text-ink-400 dark:text-ink-300">
-                  Phase 5 จะเปิด switcher เขต/โรงเรียน/ปีงบประมาณ
-                </p>
-                <div className="mt-3 flex justify-end">
-                  <button
-                    type="button"
-                    onClick={() => setTenantOpen(false)}
-                    className="text-xs text-brand-600 hover:underline"
-                  >
-                    ปิด
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
+          <TenantSwitcher initialSchoolId={user.schoolId} />
 
           <div className="hidden xl:flex items-center gap-1.5 text-[12px] text-ink-400 dark:text-ink-300 ml-2">
             <ChevronRight className="w-3 h-3" strokeWidth={1.75} />

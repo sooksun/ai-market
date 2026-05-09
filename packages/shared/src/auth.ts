@@ -13,6 +13,7 @@ export const CurrentUserSchema = z.object({
   email: z.string().email(),
   fullName: z.string(),
   schoolId: z.string(),
+  homeSchoolId: z.string(),
   roles: z.array(RoleSchema),
 });
 

@@ -11,7 +11,13 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
-import { LoginInputSchema, type LoginInput } from '@ai-market/shared';
+import {
+  LoginInputSchema,
+  SwitchTenantInputSchema,
+  type LoginInput,
+  type SwitchTenantInput,
+  type TenantsResponse,
+} from '@ai-market/shared';
 import { AuthService } from './auth.service';
 import { Public } from '../common/decorators/public.decorator';
 import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe';
@@ -43,6 +49,7 @@ export class AuthController {
         email: user.email,
         fullName: user.fullName,
         schoolId: user.schoolId,
+        homeSchoolId: user.schoolId,
         roles: user.roles.map((r: { role: string }) => r.role),
       },
     };
@@ -78,6 +85,54 @@ export class AuthController {
   @Get('me')
   me(@CurrentUser() user: AuthenticatedUser) {
     return user;
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('tenants')
+  async tenants(@CurrentUser() user: AuthenticatedUser): Promise<TenantsResponse> {
+    const schools = await this.auth.listAccessibleSchools(user.id);
+    const home = schools.find((s) => s.id === user.homeSchoolId);
+    const current = schools.find((s) => s.id === user.schoolId);
+    return {
+      current: {
+        schoolId: user.schoolId,
+        schoolName: current?.name ?? user.schoolId,
+        areaName: current?.area?.name ?? null,
+      },
+      home: {
+        schoolId: user.homeSchoolId,
+        schoolName: home?.name ?? user.homeSchoolId,
+      },
+      canSwitch: schools.length > 1 || user.roles.includes('SUPERADMIN'),
+      schools: schools.map((s) => ({
+        id: s.id,
+        name: s.name,
+        shortName: s.shortName,
+        area: s.area
+          ? { id: s.area.id, code: s.area.code, name: s.area.name }
+          : null,
+        isCurrent: s.id === user.schoolId,
+        isHome: s.id === user.homeSchoolId,
+      })),
+    };
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('switch-tenant')
+  @HttpCode(HttpStatus.OK)
+  async switchTenant(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body(new ZodValidationPipe(SwitchTenantInputSchema)) body: SwitchTenantInput,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    await this.auth.assertCanAccessSchool(user.id, body.schoolId);
+    const dbUser = await this.auth.getUserWithRoles(user.id);
+    if (!dbUser) {
+      throw new UnauthorizedException({ code: 'UNAUTHENTICATED', message: 'session หมดอายุ' });
+    }
+    const tokens = this.auth.signTokens(dbUser, body.schoolId);
+    this.setAuthCookies(res, tokens.accessToken, tokens.refreshToken);
+    return { ok: true, schoolId: body.schoolId };
   }
 
   private setAuthCookies(res: Response, access: string, refresh: string) {

@@ -23,6 +23,7 @@ enum Role {
   DIRECTOR
   AUDITOR
   ADMIN
+  SUPERADMIN
 }
 
 enum PurchaseRequestStatus {
@@ -83,8 +84,23 @@ enum RiskType {
 // Models
 // ─────────────────────────────────────────────
 
+model Area {
+  id        String    @id @default(cuid())
+  code      String?   @unique
+  name      String
+  region    String?
+  active    Boolean   @default(true)
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  schools School[]
+
+  @@map("areas")
+}
+
 model School {
   id        String    @id @default(cuid())
+  areaId    String?   @map("area_id")
   name      String
   shortName String?   @map("short_name")
   taxId     String?   @map("tax_id")
@@ -95,6 +111,7 @@ model School {
   updatedAt DateTime  @updatedAt @map("updated_at")
   deletedAt DateTime? @map("deleted_at")
 
+  area             Area?             @relation(fields: [areaId], references: [id])
   users            User[]
   rules            RuleConfig[]
   auditLogs        AuditLog[]
@@ -105,6 +122,7 @@ model School {
   vendors          Vendor[]
   auditScans       AuditScan[]
 
+  @@index([areaId, active])
   @@map("schools")
 }
 
@@ -206,6 +224,7 @@ model BudgetMovement {
 model User {
   id           String    @id @default(cuid())
   schoolId     String    @map("school_id")
+  tenantAccess Json?     @map("tenant_access")
   email        String    @unique
   passwordHash String    @map("password_hash")
   fullName     String    @map("full_name")

@@ -32,11 +32,13 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     if (!user || !user.active || user.deletedAt) {
       throw new UnauthorizedException({ code: 'UNAUTHENTICATED', message: 'session ไม่ถูกต้อง' });
     }
+    // schoolId comes from JWT (active tenant), homeSchoolId from DB row.
     return {
       id: user.id,
       email: user.email,
       fullName: user.fullName,
-      schoolId: user.schoolId,
+      schoolId: payload.schoolId ?? user.schoolId,
+      homeSchoolId: user.schoolId,
       roles: user.roles.map((r: { role: import('@ai-market/shared').Role }) => r.role),
     };
   }

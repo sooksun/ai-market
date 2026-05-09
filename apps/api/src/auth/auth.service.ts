@@ -13,6 +13,7 @@ export interface AuthTokens {
 export interface JwtPayload {
   sub: string;
   schoolId: string;
+  homeSchoolId: string;
   roles: Role[];
 }
 
@@ -49,10 +50,14 @@ export class AuthService {
     return user;
   }
 
-  signTokens(user: { id: string; schoolId: string; roles: { role: Role }[] }): AuthTokens {
+  signTokens(
+    user: { id: string; schoolId: string; roles: { role: Role }[] },
+    activeSchoolId?: string,
+  ): AuthTokens {
     const payload: JwtPayload = {
       sub: user.id,
-      schoolId: user.schoolId,
+      schoolId: activeSchoolId ?? user.schoolId,
+      homeSchoolId: user.schoolId,
       roles: user.roles.map((r) => r.role),
     };
     const accessToken = this.jwt.sign(payload);
@@ -61,6 +66,70 @@ export class AuthService {
       expiresIn: this.config.get<string>('JWT_REFRESH_TTL') ?? '7d',
     });
     return { accessToken, refreshToken };
+  }
+
+  /**
+   * Decide if user can switch into the given school.
+   * - SUPERADMIN: any active school
+   * - tenantAccess includes target schoolId: yes
+   * - target is the user's home school: yes
+   */
+  async assertCanAccessSchool(userId: string, schoolId: string): Promise<void> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: { roles: true },
+    });
+    if (!user || user.deletedAt || !user.active) {
+      throw new UnauthorizedException({
+        code: 'UNAUTHENTICATED',
+        message: 'session ไม่ถูกต้อง',
+      });
+    }
+    const roles = user.roles.map((r) => r.role);
+    if (roles.includes('SUPERADMIN')) {
+      const exists = await this.prisma.school.findFirst({
+        where: { id: schoolId, deletedAt: null, active: true },
+        select: { id: true },
+      });
+      if (!exists) {
+        throw new UnauthorizedException({
+          code: 'TENANT_NOT_FOUND',
+          message: 'ไม่พบโรงเรียนปลายทาง',
+        });
+      }
+      return;
+    }
+    if (schoolId === user.schoolId) return;
+    const access = parseTenantAccess(user.tenantAccess);
+    if (access === '*' || access.includes(schoolId)) return;
+    throw new UnauthorizedException({
+      code: 'TENANT_FORBIDDEN',
+      message: 'ไม่มีสิทธิ์เข้าโรงเรียนนี้',
+    });
+  }
+
+  async listAccessibleSchools(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: { roles: true },
+    });
+    if (!user) return [];
+    const roles = user.roles.map((r) => r.role);
+    if (roles.includes('SUPERADMIN')) {
+      return this.prisma.school.findMany({
+        where: { deletedAt: null, active: true },
+        orderBy: [{ area: { code: 'asc' } }, { name: 'asc' }],
+        include: { area: { select: { id: true, code: true, name: true } } },
+      });
+    }
+    const access = parseTenantAccess(user.tenantAccess);
+    const ids = new Set<string>([user.schoolId]);
+    if (Array.isArray(access)) for (const id of access) ids.add(id);
+    return this.prisma.school.findMany({
+      where: { id: { in: Array.from(ids) }, deletedAt: null, active: true },
+      orderBy: [{ area: { code: 'asc' } }, { name: 'asc' }],
+      include: { area: { select: { id: true, code: true, name: true } } },
+    });
   }
 
   verifyRefresh(token: string): JwtPayload {
@@ -82,4 +151,10 @@ export class AuthService {
       include: { roles: true },
     });
   }
+}
+
+function parseTenantAccess(raw: unknown): '*' | string[] {
+  if (raw === '*') return '*';
+  if (Array.isArray(raw)) return raw.filter((s): s is string => typeof s === 'string');
+  return [];
 }
