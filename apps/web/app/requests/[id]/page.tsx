@@ -261,6 +261,15 @@ export default async function RequestDetailPage({
                   เอกสารราชการ
                 </Button>
               </Link>
+              {(pr.status === 'APPROVED' ||
+                pr.status === 'IN_RECEIVING' ||
+                pr.status === 'RECEIVED') && (
+                <Link href={`/receiving/${pr.id}` as never}>
+                  <Button size="sm" icon="ClipboardCheck">
+                    ตรวจรับ
+                  </Button>
+                </Link>
+              )}
             </>
           }
         />

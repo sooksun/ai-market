@@ -329,6 +329,7 @@ model PurchaseRequest {
   riskFlags    AiRiskFlag[]
   quotations   VendorQuotation[]
   approval     ApprovalWorkflow?
+  receiving    ReceivingRecord?
 
   @@unique([schoolId, docNo])
   @@index([schoolId, status, createdAt])
@@ -358,6 +359,7 @@ model PurchaseRequestItem {
   specifications  ItemSpecification[]
   riskFlags       AiRiskFlag[]
   quotationItems  QuotationItem[]
+  receivingItems  ReceivingItem[]
 
   @@unique([purchaseRequestId, ordinal])
   @@index([purchaseRequestId])
@@ -615,6 +617,66 @@ model ProcurementDocument {
   @@index([schoolId, refType, refId])
   @@index([templateKey, generatedAt])
   @@map("procurement_documents")
+}
+
+// ─────────────────────────────────────────────
+// Phase 4A — Receiving & Inspection
+// ─────────────────────────────────────────────
+
+enum ReceivingStatus {
+  IN_PROGRESS
+  COMPLETE
+  PARTIAL
+  REJECTED
+  CANCELLED
+}
+
+enum ItemReceiveCondition {
+  GOOD
+  DAMAGED
+  WRONG_SPEC
+  SHORT_QUANTITY
+  NOT_RECEIVED
+}
+
+model ReceivingRecord {
+  id                String          @id @default(cuid())
+  schoolId          String          @map("school_id")
+  purchaseRequestId String          @unique @map("purchase_request_id")
+  status            ReceivingStatus @default(IN_PROGRESS)
+  startedAt         DateTime        @default(now()) @map("started_at")
+  finalizedAt       DateTime?       @map("finalized_at")
+  finalizedById     String?         @map("finalized_by_id")
+  comment           String?         @db.Text
+  inspectorIds      Json?           @map("inspector_ids")
+  createdAt         DateTime        @default(now()) @map("created_at")
+  updatedAt         DateTime        @updatedAt @map("updated_at")
+
+  purchaseRequest PurchaseRequest @relation(fields: [purchaseRequestId], references: [id], onDelete: Cascade)
+  items           ReceivingItem[]
+
+  @@index([schoolId, status])
+  @@map("receiving_records")
+}
+
+model ReceivingItem {
+  id                    String                @id @default(cuid())
+  receivingRecordId     String                @map("receiving_record_id")
+  purchaseRequestItemId String                @map("purchase_request_item_id")
+  quantityReceived      Decimal?              @map("quantity_received") @db.Decimal(12, 2)
+  condition             ItemReceiveCondition? @default(GOOD)
+  conditionNotes        String?               @map("condition_notes") @db.Text
+  inspectedAt           DateTime?             @map("inspected_at")
+  inspectedById         String?               @map("inspected_by_id")
+  createdAt             DateTime              @default(now()) @map("created_at")
+  updatedAt             DateTime              @updatedAt @map("updated_at")
+
+  receivingRecord     ReceivingRecord     @relation(fields: [receivingRecordId], references: [id], onDelete: Cascade)
+  purchaseRequestItem PurchaseRequestItem @relation(fields: [purchaseRequestItemId], references: [id], onDelete: Cascade)
+
+  @@unique([receivingRecordId, purchaseRequestItemId])
+  @@index([purchaseRequestItemId])
+  @@map("receiving_items")
 }
 
 model Attachment {

@@ -18,6 +18,7 @@ import { QuotationsModule } from './quotations/quotations.module';
 import { ApprovalsModule } from './approvals/approvals.module';
 import { DocumentsModule } from './documents/documents.module';
 import { ProcurementRulesModule } from './procurement-rules/procurement-rules.module';
+import { ReceivingsModule } from './receivings/receivings.module';
 import { HealthController } from './health/health.controller';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
@@ -46,6 +47,7 @@ import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
     ApprovalsModule,
     DocumentsModule,
     ProcurementRulesModule,
+    ReceivingsModule,
   ],
   controllers: [HealthController],
   providers: [
