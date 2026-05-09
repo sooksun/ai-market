@@ -42,12 +42,20 @@ export default async function DocumentPrintPage({
       <PrintTrigger />
       <div className="mx-auto max-w-[210mm] px-6 pt-4 pb-12 print:p-0 print:max-w-none">
         <div className="flex justify-end gap-2 print:hidden mb-2">
+          <a
+            href={`${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3100/api/v1'}/documents/${doc.id}/pdf`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+          >
+            ดาวน์โหลด PDF
+          </a>
           <button
             id="print-button"
             type="button"
             className="rounded-md bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600"
           >
-            พิมพ์ / บันทึก PDF (Ctrl+P)
+            พิมพ์ในเบราว์เซอร์ (Ctrl+P)
           </button>
         </div>
         {/* Rendered template HTML — admin-controlled, escaped at template level by Handlebars */}

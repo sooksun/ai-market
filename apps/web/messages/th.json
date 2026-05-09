@@ -102,6 +102,13 @@
     },
     "audit": {
       "scan": "AI Audit: สแกนความเสี่ยง"
+    },
+    "document": {
+      "render": "ออกเอกสาร",
+      "download_pdf": "ดาวน์โหลด PDF"
+    },
+    "document_template": {
+      "update": "แก้ template"
     }
   },
   "entityType": {
@@ -115,6 +122,8 @@
     "Budget": "งบ allocation",
     "AuditScan": "การสแกน AI Audit",
     "Tenant": "โรงเรียน",
-    "School": "โรงเรียน"
+    "School": "โรงเรียน",
+    "ProcurementDocument": "เอกสาร",
+    "DocumentTemplate": "template เอกสาร"
   }
 }

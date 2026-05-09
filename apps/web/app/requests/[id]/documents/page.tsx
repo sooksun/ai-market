@@ -147,14 +147,25 @@ export default async function DocumentsPage({
                         <span className="font-mono">{d.templateKey} v{d.templateVersion}</span>
                       </div>
                     </div>
-                    <Link
-                      href={`/documents/${d.id}` as never}
-                      target="_blank"
-                      className="inline-flex items-center gap-1 rounded-lg border border-ink-200 dark:border-white/10 px-2.5 py-1 text-xs font-medium text-ink-700 dark:text-ink-100 hover:bg-ink-50 dark:hover:bg-ink-800"
-                    >
-                      <Icon name="Eye" className="w-3.5 h-3.5" />
-                      ดู / พิมพ์
-                    </Link>
+                    <div className="flex items-center gap-1.5">
+                      <Link
+                        href={`/documents/${d.id}` as never}
+                        target="_blank"
+                        className="inline-flex items-center gap-1 rounded-lg border border-ink-200 dark:border-white/10 px-2.5 py-1 text-xs font-medium text-ink-700 dark:text-ink-100 hover:bg-ink-50 dark:hover:bg-ink-800"
+                      >
+                        <Icon name="Eye" className="w-3.5 h-3.5" />
+                        ดู
+                      </Link>
+                      <a
+                        href={`${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3100/api/v1'}/documents/${d.id}/pdf`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 rounded-lg bg-rose-50 dark:bg-rose-900/40 px-2.5 py-1 text-xs font-medium text-rose-700 dark:text-rose-200 hover:bg-rose-100 dark:hover:bg-rose-900/60"
+                      >
+                        <Icon name="FileDown" className="w-3.5 h-3.5" />
+                        PDF
+                      </a>
+                    </div>
                   </li>
                 ))}
               </ul>
