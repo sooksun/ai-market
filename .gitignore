@@ -47,3 +47,6 @@ uploads/
 
 # Claude Design handoff (reference only, re-extract from zip when needed)
 design-handoff/
+
+# Local scratch / throwaway test files
+.scratch/
