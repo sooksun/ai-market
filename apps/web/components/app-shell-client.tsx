@@ -364,25 +364,54 @@ export function AppShellClient({
               <X className="w-4 h-4" strokeWidth={1.75} />
             </button>
           </div>
-          <div className="flex-1 overflow-y-auto p-4">
+          <div className="flex-1 overflow-y-auto p-4 space-y-3">
             <div className="rounded-2xl bg-ink-50 dark:bg-ink-800/60 p-4 text-sm leading-relaxed text-ink-700 dark:text-ink-100">
               <div className="flex gap-2 mb-2">
                 <span className="grid place-items-center w-7 h-7 rounded-lg grad-brand text-white shrink-0">
                   <Sparkles className="w-3 h-3" strokeWidth={2} />
                 </span>
-                <div className="font-medium">Co-pilot จะมาเร็ว ๆ นี้</div>
+                <div className="font-medium">AI ที่เปิดใช้แล้ว</div>
               </div>
-              <p className="text-[13px] text-ink-600 dark:text-ink-200">
-                Phase 1 เปิด AI ผ่าน 2 endpoint แล้ว: <code className="font-mono">parse-items</code>,{' '}
-                <code className="font-mono">check-cloudiness</code>
-              </p>
-              <p className="mt-2 text-[12px] text-ink-500 dark:text-ink-300">
-                Phase 2+ จะเปิด chat-style co-pilot ผ่านปุ่มนี้ — ถาม-ตอบเกี่ยวกับคำขอซื้อ งบประมาณ และความเสี่ยง
-              </p>
-              <div className="mt-3 flex items-center gap-1.5 text-[11px] text-ink-400 dark:text-ink-300">
-                <CheckIcon className="w-3 h-3 text-emerald-500" />
-                AI ทุก action ถูกบันทึกใน <code className="font-mono">ai_invocations</code>
+              <ul className="text-[13px] text-ink-600 dark:text-ink-200 space-y-1.5">
+                <li className="flex items-start gap-1.5">
+                  <CheckIcon className="w-3 h-3 mt-1 shrink-0 text-emerald-500" />
+                  <span>
+                    <code className="font-mono">parse-items</code> — แยกรายการพัสดุจากข้อความ ·
+                    upload .xlsx/.csv ก็ได้
+                  </span>
+                </li>
+                <li className="flex items-start gap-1.5">
+                  <CheckIcon className="w-3 h-3 mt-1 shrink-0 text-emerald-500" />
+                  <span>
+                    <code className="font-mono">check-cloudiness</code> — ตรวจสเปกคลุมเครือ /
+                    คำเสี่ยงล็อกยี่ห้อ ตอน submit
+                  </span>
+                </li>
+                <li className="flex items-start gap-1.5">
+                  <CheckIcon className="w-3 h-3 mt-1 shrink-0 text-emerald-500" />
+                  <span>
+                    <code className="font-mono">spec-writer</code> — เขียนสเปกใหม่ให้เป็นกลาง
+                    วัดได้ พร้อมเกณฑ์ตรวจรับ (ปุ่มในหน้าคำขอ)
+                  </span>
+                </li>
+              </ul>
+            </div>
+
+            <div className="rounded-2xl border border-dashed border-ink-200 dark:border-white/10 p-4 text-[12px] text-ink-500 dark:text-ink-300 leading-relaxed">
+              <div className="flex items-center gap-1.5 font-medium text-ink-700 dark:text-ink-100 mb-1">
+                <Sparkles className="w-3.5 h-3.5 text-brand-500" />
+                Chat co-pilot (เร็ว ๆ นี้)
               </div>
+              <p>
+                Phase 5 (AI Audit) จะเปิด chat-style co-pilot ในปุ่มนี้ —
+                ถาม-ตอบบริบทคำขอซื้อ/งบประมาณ/ความเสี่ยง พร้อมแหล่งข้อมูลกำกับทุกคำตอบ
+              </p>
+            </div>
+
+            <div className="text-center text-[10.5px] text-ink-400 dark:text-ink-300">
+              <CheckIcon className="w-3 h-3 mx-auto text-emerald-500 mb-0.5" />
+              AI ทุก action ถูกบันทึกใน <code className="font-mono">ai_invocations</code> ·
+              ผู้ใช้เป็นผู้ตัดสินใจสุดท้ายเสมอ
             </div>
           </div>
         </div>
