@@ -16,7 +16,13 @@ import { fmtNum } from '@/components/ui/format';
 import { PrActions } from './actions';
 import { RiskFlagsPanel } from './risk-flags';
 import { ApprovalPanel } from './approval-panel';
-import type { ApprovalStepStatus, ApprovalWorkflowStatus, Role } from '@ai-market/shared';
+import { ChecklistPanel } from './checklist-panel';
+import type {
+  ApprovalStepStatus,
+  ApprovalWorkflowStatus,
+  ChecklistResponse,
+  Role,
+} from '@ai-market/shared';
 
 interface ApprovalStepLite {
   id: string;
@@ -166,6 +172,17 @@ export default async function RequestDetailPage({
     );
   } catch {
     workflow = null;
+  }
+
+  // Procurement rules checklist (always available)
+  let checklist: ChecklistResponse | null = null;
+  try {
+    checklist = await apiFetch<ChecklistResponse>(
+      `/purchase-requests/${id}/checklist`,
+      { cookie },
+    );
+  } catch {
+    checklist = null;
   }
 
   const isOwner = pr.requesterId === user.id;
@@ -384,6 +401,9 @@ export default async function RequestDetailPage({
           <aside className="space-y-5">
             {workflow && (
               <ApprovalPanel prId={pr.id} workflow={workflow} userRoles={user.roles} />
+            )}
+            {checklist && checklist.amount > 0 && (
+              <ChecklistPanel prId={pr.id} initial={checklist} />
             )}
             {budgetMatch && (
               <Card className="p-5">

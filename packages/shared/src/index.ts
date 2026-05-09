@@ -8,3 +8,4 @@ export * from './budget';
 export * from './vendor';
 export * from './approval';
 export * from './document';
+export * from './procurement-rules';

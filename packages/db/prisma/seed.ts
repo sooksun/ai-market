@@ -59,17 +59,51 @@ async function main() {
     {
       key: 'procurement_thresholds',
       type: 'thresholds',
-      value: { specific_method_max: 500000 },
-      description: 'วงเงินสูงสุดของวิธีจัดซื้อแต่ละแบบ (บาท)',
+      value: {
+        tiers: [
+          {
+            method: 'SPECIFIC_METHOD',
+            labelTh: 'วิธีเฉพาะเจาะจง',
+            max: 500000,
+          },
+          {
+            method: 'SELECTIVE',
+            labelTh: 'วิธีคัดเลือก',
+            max: 5000000,
+          },
+          {
+            method: 'E_BIDDING',
+            labelTh: 'วิธีประกาศเชิญชวน (e-bidding)',
+            max: null,
+          },
+        ],
+      },
+      description:
+        'tier วงเงินสูงสุดต่อวิธีจัดซื้อ — ปรับตามระเบียบกระทรวงการคลังที่ใช้',
     },
     {
       key: 'required_docs_by_method',
       type: 'checklist',
       value: {
-        SPECIFIC_METHOD: ['memo', 'compare_table', 'tor'],
-        E_BIDDING: ['memo', 'tor', 'price_announcement'],
+        SPECIFIC_METHOD: [
+          { key: 'memo', labelTh: 'บันทึกข้อความขออนุมัติจัดซื้อ', required: true },
+          { key: 'comparison_table', labelTh: 'ตารางเปรียบเทียบราคา (≥3 ราย)', required: true },
+          { key: 'evaluation_report', labelTh: 'รายงานพิจารณาผลการเสนอราคา', required: true },
+        ],
+        SELECTIVE: [
+          { key: 'memo', labelTh: 'บันทึกข้อความขออนุมัติจัดซื้อ', required: true },
+          { key: 'tor', labelTh: 'รายละเอียดคุณลักษณะ (TOR)', required: true },
+          { key: 'comparison_table', labelTh: 'ตารางเปรียบเทียบราคา', required: true },
+          { key: 'evaluation_report', labelTh: 'รายงานพิจารณา', required: true },
+        ],
+        E_BIDDING: [
+          { key: 'memo', labelTh: 'บันทึกข้อความขออนุมัติจัดซื้อ', required: true },
+          { key: 'tor', labelTh: 'รายละเอียดคุณลักษณะ (TOR)', required: true },
+          { key: 'price_announcement', labelTh: 'ประกาศเผยแพร่ราคากลาง', required: true },
+          { key: 'evaluation_report', labelTh: 'รายงานพิจารณา', required: true },
+        ],
       },
-      description: 'เอกสารที่ต้องมีตามวิธีจัดซื้อ',
+      description: 'เอกสารที่ต้องมีตามวิธีจัดซื้อ — ใช้กับ checklist ในหน้าคำขอ',
     },
     {
       key: 'approval_workflow_default',
