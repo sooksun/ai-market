@@ -1,4 +1,4 @@
-import type Anthropic from '@anthropic-ai/sdk';
+import type { LlmTool } from '../llm.service';
 
 export const AUDIT_SCAN_FEW_SHOT_TH = `งานคือตรวจสอบย้อนหลัง (audit) ชุดคำขอซื้อในระบบพัสดุโรงเรียน เพื่อหารูปแบบความเสี่ยงที่ heuristic อัตโนมัติจับไม่ได้
 
@@ -42,7 +42,7 @@ export const AUDIT_SCAN_FEW_SHOT_TH = `งานคือตรวจสอบ�
 }
 `;
 
-export const auditScanTool: Anthropic.Tool = {
+export const auditScanTool: LlmTool = {
   name: 'flag_risks',
   description:
     'ตรวจสอบเชิงคุณภาพ (qualitative) ในชุดคำขอซื้อหา pattern ความเสี่ยงข้าม PR — เน้นล็อกสเปก เหตุผลขาด พฤติกรรมน่าสงสัย',

@@ -1,16 +1,14 @@
 import {
   BadGatewayException,
-  Inject,
   Injectable,
   ServiceUnavailableException,
 } from '@nestjs/common';
-import type Anthropic from '@anthropic-ai/sdk';
 import {
   ParseItemsToolOutputSchema,
   type ParseItemsInput,
   type ParseItemsResponse,
 } from '@ai-market/shared';
-import { ANTHROPIC, FAST_MODEL } from '../anthropic.client';
+import { LlmService } from '../llm.service';
 import { BASE_SYSTEM_PROMPT_TH } from '../prompts/base-system';
 import { PARSE_ITEMS_FEW_SHOT_TH, parseItemsTool } from '../prompts/parse-items.v1';
 import { PROMPT_VERSIONS } from '../prompts/registry';
@@ -20,64 +18,44 @@ import type { AuthenticatedUser } from '../../common/decorators/current-user.dec
 @Injectable()
 export class ParseItemsService {
   constructor(
-    @Inject(ANTHROPIC) private anthropic: Anthropic,
+    private llm: LlmService,
     private invocations: AiInvocationService,
   ) {}
 
   async parse(user: AuthenticatedUser, input: ParseItemsInput): Promise<ParseItemsResponse> {
-    if (!process.env.ANTHROPIC_API_KEY) {
+    if (!this.llm.isConfigured()) {
       throw new ServiceUnavailableException({
         code: 'AI_PROVIDER_NOT_CONFIGURED',
-        message: 'ยังไม่ได้ตั้งค่า ANTHROPIC_API_KEY',
+        message: 'ยังไม่ได้ตั้งค่า OPENROUTER_API_KEY',
       });
     }
 
     const startedAt = Date.now();
     const promptVersion = PROMPT_VERSIONS.PARSE_ITEMS;
-    const model = FAST_MODEL;
+    const model = this.llm.fastModel;
 
     const userMessage = this.buildUserMessage(input);
 
     try {
-      const response = await this.anthropic.messages.create({
+      const result = await this.llm.callTool({
         model,
-        max_tokens: 2048,
-        system: [
-          {
-            type: 'text',
-            text: BASE_SYSTEM_PROMPT_TH,
-            cache_control: { type: 'ephemeral' },
-          },
-          {
-            type: 'text',
-            text: PARSE_ITEMS_FEW_SHOT_TH,
-            cache_control: { type: 'ephemeral' },
-          },
-        ],
-        tools: [parseItemsTool],
-        tool_choice: { type: 'tool', name: 'extract_items' },
-        messages: [{ role: 'user', content: userMessage }],
+        maxTokens: 2048,
+        systemBlocks: [BASE_SYSTEM_PROMPT_TH, PARSE_ITEMS_FEW_SHOT_TH],
+        userMessage,
+        tool: parseItemsTool,
       });
 
-      const toolUse = response.content.find((c) => c.type === 'tool_use');
-      if (!toolUse || toolUse.type !== 'tool_use') {
-        throw new BadGatewayException({
-          code: 'AI_PROVIDER_ERROR',
-          message: 'AI ไม่ตอบกลับในรูปแบบที่ถูกต้อง',
-        });
-      }
-
-      const parsed = ParseItemsToolOutputSchema.safeParse(toolUse.input);
+      const parsed = ParseItemsToolOutputSchema.safeParse(result.toolInput);
       if (!parsed.success) {
         await this.invocations.log({
           user,
           endpoint: 'ai.parse_items',
-          model,
+          model: result.model,
           promptVersion,
           input,
-          output: toolUse.input,
-          tokenInput: response.usage.input_tokens,
-          tokenOutput: response.usage.output_tokens,
+          output: result.toolInput,
+          tokenInput: result.tokenInput,
+          tokenOutput: result.tokenOutput,
           latencyMs: Date.now() - startedAt,
           status: 'error',
           errorMessage: `schema validation failed: ${parsed.error.message}`,
@@ -91,12 +69,12 @@ export class ParseItemsService {
       const invocation = await this.invocations.log({
         user,
         endpoint: 'ai.parse_items',
-        model,
+        model: result.model,
         promptVersion,
         input,
         output: parsed.data,
-        tokenInput: response.usage.input_tokens,
-        tokenOutput: response.usage.output_tokens,
+        tokenInput: result.tokenInput,
+        tokenOutput: result.tokenOutput,
         latencyMs: Date.now() - startedAt,
         status: 'success',
       });
@@ -104,6 +82,23 @@ export class ParseItemsService {
       return { invocationId: invocation.id, ...parsed.data };
     } catch (err) {
       if (err instanceof BadGatewayException || err instanceof ServiceUnavailableException) {
+        // Already logged where appropriate; just bubble.
+        if (err instanceof BadGatewayException && !(err.getResponse() as { logged?: boolean })?.logged) {
+          const message = (err.getResponse() as { details?: { providerMessage?: string } })?.details?.providerMessage ?? err.message;
+          await this.invocations
+            .log({
+              user,
+              endpoint: 'ai.parse_items',
+              model,
+              promptVersion,
+              input,
+              output: null,
+              latencyMs: Date.now() - startedAt,
+              status: 'error',
+              errorMessage: message,
+            })
+            .catch(() => null);
+        }
         throw err;
       }
       const message = err instanceof Error ? err.message : String(err);

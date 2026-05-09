@@ -59,9 +59,9 @@ OUTPUT (tool input):
 }
 `;
 
-import type Anthropic from '@anthropic-ai/sdk';
+import type { LlmTool } from '../llm.service';
 
-export const parseItemsTool: Anthropic.Tool = {
+export const parseItemsTool: LlmTool = {
   name: 'extract_items',
   description: 'แยกรายการพัสดุจากข้อความ/ตาราง และส่งกลับเป็น JSON ตาม schema',
   input_schema: {

@@ -1,4 +1,4 @@
-import type Anthropic from '@anthropic-ai/sdk';
+import type { LlmTool } from '../llm.service';
 
 export const SPEC_WRITER_FEW_SHOT_TH = `ตัวอย่างการเขียนสเปกใหม่ที่เป็นกลาง:
 
@@ -53,7 +53,7 @@ output (tool):
 - เพิ่ม "เกณฑ์ตรวจรับ" ถ้าเป็นครุภัณฑ์ราคาสูง
 `;
 
-export const specWriterTool: Anthropic.Tool = {
+export const specWriterTool: LlmTool = {
   name: 'rewrite_specification',
   description:
     'เขียนสเปกใหม่ให้เป็นกลาง วัดได้ ไม่ระบุยี่ห้อ และตรวจหาความเสี่ยงล็อกยี่ห้อ/สเปกคลุมเครือ',

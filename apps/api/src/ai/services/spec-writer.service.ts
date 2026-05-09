@@ -1,18 +1,16 @@
 import {
   BadGatewayException,
   ForbiddenException,
-  Inject,
   Injectable,
   NotFoundException,
   ServiceUnavailableException,
 } from '@nestjs/common';
-import type Anthropic from '@anthropic-ai/sdk';
 import {
   SpecWriterToolOutputSchema,
   type SpecTone,
   type SpecWriterResponse,
 } from '@ai-market/shared';
-import { ANTHROPIC, DEFAULT_MODEL } from '../anthropic.client';
+import { LlmService } from '../llm.service';
 import { BASE_SYSTEM_PROMPT_TH } from '../prompts/base-system';
 import { SPEC_WRITER_FEW_SHOT_TH, specWriterTool } from '../prompts/spec-writer.v1';
 import { PROMPT_VERSIONS } from '../prompts/registry';
@@ -23,7 +21,7 @@ import type { AuthenticatedUser } from '../../common/decorators/current-user.dec
 @Injectable()
 export class SpecWriterService {
   constructor(
-    @Inject(ANTHROPIC) private anthropic: Anthropic,
+    private llm: LlmService,
     private prisma: PrismaService,
     private invocations: AiInvocationService,
   ) {}
@@ -34,10 +32,10 @@ export class SpecWriterService {
     tone: SpecTone,
     rawSpecOverride?: string,
   ): Promise<SpecWriterResponse> {
-    if (!process.env.ANTHROPIC_API_KEY) {
+    if (!this.llm.isConfigured()) {
       throw new ServiceUnavailableException({
         code: 'AI_PROVIDER_NOT_CONFIGURED',
-        message: 'ยังไม่ได้ตั้งค่า ANTHROPIC_API_KEY',
+        message: 'ยังไม่ได้ตั้งค่า OPENROUTER_API_KEY',
       });
     }
 
@@ -80,48 +78,28 @@ tone: ${tone}
 
     const startedAt = Date.now();
     const promptVersion = PROMPT_VERSIONS.SPEC_WRITER;
-    const model = DEFAULT_MODEL;
+    const model = this.llm.defaultModel;
 
     try {
-      const response = await this.anthropic.messages.create({
+      const result = await this.llm.callTool({
         model,
-        max_tokens: 2048,
-        system: [
-          {
-            type: 'text',
-            text: BASE_SYSTEM_PROMPT_TH,
-            cache_control: { type: 'ephemeral' },
-          },
-          {
-            type: 'text',
-            text: SPEC_WRITER_FEW_SHOT_TH,
-            cache_control: { type: 'ephemeral' },
-          },
-        ],
-        tools: [specWriterTool],
-        tool_choice: { type: 'tool', name: 'rewrite_specification' },
-        messages: [{ role: 'user', content: userMessage }],
+        maxTokens: 2048,
+        systemBlocks: [BASE_SYSTEM_PROMPT_TH, SPEC_WRITER_FEW_SHOT_TH],
+        userMessage,
+        tool: specWriterTool,
       });
 
-      const toolUse = response.content.find((c) => c.type === 'tool_use');
-      if (!toolUse || toolUse.type !== 'tool_use') {
-        throw new BadGatewayException({
-          code: 'AI_PROVIDER_ERROR',
-          message: 'AI ไม่ตอบกลับในรูปแบบที่ถูกต้อง',
-        });
-      }
-
-      const parsed = SpecWriterToolOutputSchema.safeParse(toolUse.input);
+      const parsed = SpecWriterToolOutputSchema.safeParse(result.toolInput);
       if (!parsed.success) {
         await this.invocations.log({
           user,
           endpoint: 'ai.spec_writer',
-          model,
+          model: result.model,
           promptVersion,
           input: { itemId, tone, rawSpec },
-          output: toolUse.input,
-          tokenInput: response.usage.input_tokens,
-          tokenOutput: response.usage.output_tokens,
+          output: result.toolInput,
+          tokenInput: result.tokenInput,
+          tokenOutput: result.tokenOutput,
           latencyMs: Date.now() - startedAt,
           status: 'error',
           errorMessage: `schema validation failed: ${parsed.error.message}`,
@@ -135,12 +113,12 @@ tone: ${tone}
       const invocation = await this.invocations.log({
         user,
         endpoint: 'ai.spec_writer',
-        model,
+        model: result.model,
         promptVersion,
         input: { itemId, tone, rawSpec, lockWords },
         output: parsed.data,
-        tokenInput: response.usage.input_tokens,
-        tokenOutput: response.usage.output_tokens,
+        tokenInput: result.tokenInput,
+        tokenOutput: result.tokenOutput,
         latencyMs: Date.now() - startedAt,
         status: 'success',
       });

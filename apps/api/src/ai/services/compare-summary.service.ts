@@ -1,17 +1,15 @@
 import {
   BadGatewayException,
   ForbiddenException,
-  Inject,
   Injectable,
   NotFoundException,
   ServiceUnavailableException,
 } from '@nestjs/common';
-import type Anthropic from '@anthropic-ai/sdk';
 import {
   CompareSummaryToolOutputSchema,
   type CompareSummaryResponse,
 } from '@ai-market/shared';
-import { ANTHROPIC, DEFAULT_MODEL } from '../anthropic.client';
+import { LlmService } from '../llm.service';
 import { BASE_SYSTEM_PROMPT_TH } from '../prompts/base-system';
 import {
   COMPARE_SUMMARY_FEW_SHOT_TH,
@@ -25,7 +23,7 @@ import type { AuthenticatedUser } from '../../common/decorators/current-user.dec
 @Injectable()
 export class CompareSummaryService {
   constructor(
-    @Inject(ANTHROPIC) private anthropic: Anthropic,
+    private llm: LlmService,
     private invocations: AiInvocationService,
     private comparison: ComparisonService,
   ) {}
@@ -34,10 +32,10 @@ export class CompareSummaryService {
     user: AuthenticatedUser,
     purchaseRequestId: string,
   ): Promise<CompareSummaryResponse> {
-    if (!process.env.ANTHROPIC_API_KEY) {
+    if (!this.llm.isConfigured()) {
       throw new ServiceUnavailableException({
         code: 'AI_PROVIDER_NOT_CONFIGURED',
-        message: 'ยังไม่ได้ตั้งค่า ANTHROPIC_API_KEY',
+        message: 'ยังไม่ได้ตั้งค่า OPENROUTER_API_KEY',
       });
     }
 
@@ -51,7 +49,7 @@ export class CompareSummaryService {
 
     const startedAt = Date.now();
     const promptVersion = PROMPT_VERSIONS.COMPARE_SUMMARY;
-    const model = DEFAULT_MODEL;
+    const model = this.llm.defaultModel;
 
     const userMessage = `ตารางเปรียบเทียบใบเสนอราคา (PR ${data.docNo ?? purchaseRequestId}):
 
@@ -94,41 +92,25 @@ ${JSON.stringify(
 โปรดเรียก tool summarize_comparison`;
 
     try {
-      const response = await this.anthropic.messages.create({
+      const result = await this.llm.callTool({
         model,
-        max_tokens: 2048,
-        system: [
-          { type: 'text', text: BASE_SYSTEM_PROMPT_TH, cache_control: { type: 'ephemeral' } },
-          {
-            type: 'text',
-            text: COMPARE_SUMMARY_FEW_SHOT_TH,
-            cache_control: { type: 'ephemeral' },
-          },
-        ],
-        tools: [compareSummaryTool],
-        tool_choice: { type: 'tool', name: 'summarize_comparison' },
-        messages: [{ role: 'user', content: userMessage }],
+        maxTokens: 2048,
+        systemBlocks: [BASE_SYSTEM_PROMPT_TH, COMPARE_SUMMARY_FEW_SHOT_TH],
+        userMessage,
+        tool: compareSummaryTool,
       });
 
-      const toolUse = response.content.find((c) => c.type === 'tool_use');
-      if (!toolUse || toolUse.type !== 'tool_use') {
-        throw new BadGatewayException({
-          code: 'AI_PROVIDER_ERROR',
-          message: 'AI ไม่ตอบ tool result',
-        });
-      }
-
-      const parsed = CompareSummaryToolOutputSchema.safeParse(toolUse.input);
+      const parsed = CompareSummaryToolOutputSchema.safeParse(result.toolInput);
       if (!parsed.success) {
         await this.invocations.log({
           user,
           endpoint: 'ai.compare_summary',
-          model,
+          model: result.model,
           promptVersion,
           input: { purchaseRequestId },
-          output: toolUse.input,
-          tokenInput: response.usage.input_tokens,
-          tokenOutput: response.usage.output_tokens,
+          output: result.toolInput,
+          tokenInput: result.tokenInput,
+          tokenOutput: result.tokenOutput,
           latencyMs: Date.now() - startedAt,
           status: 'error',
           errorMessage: `schema validation failed: ${parsed.error.message}`,
@@ -142,12 +124,12 @@ ${JSON.stringify(
       const invocation = await this.invocations.log({
         user,
         endpoint: 'ai.compare_summary',
-        model,
+        model: result.model,
         promptVersion,
         input: { purchaseRequestId },
         output: parsed.data,
-        tokenInput: response.usage.input_tokens,
-        tokenOutput: response.usage.output_tokens,
+        tokenInput: result.tokenInput,
+        tokenOutput: result.tokenOutput,
         latencyMs: Date.now() - startedAt,
         status: 'success',
       });

@@ -1,11 +1,10 @@
-import { BadGatewayException, Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
-import type Anthropic from '@anthropic-ai/sdk';
+import { BadGatewayException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { Prisma, RiskSeverity, RiskType } from '@ai-market/db';
 import {
   CloudinessToolOutputSchema,
   type CheckCloudinessResponse,
 } from '@ai-market/shared';
-import { ANTHROPIC, FAST_MODEL } from '../anthropic.client';
+import { LlmService } from '../llm.service';
 import { BASE_SYSTEM_PROMPT_TH } from '../prompts/base-system';
 import {
   CLOUDINESS_CHECK_FEW_SHOT_TH,
@@ -21,7 +20,7 @@ export class CloudinessService {
   private readonly logger = new Logger(CloudinessService.name);
 
   constructor(
-    @Inject(ANTHROPIC) private anthropic: Anthropic,
+    private llm: LlmService,
     private invocations: AiInvocationService,
     private prisma: PrismaService,
   ) {}
@@ -36,10 +35,10 @@ export class CloudinessService {
     user: AuthenticatedUser | null,
     purchaseRequestId: string,
   ): Promise<CheckCloudinessResponse> {
-    if (!process.env.ANTHROPIC_API_KEY) {
+    if (!this.llm.isConfigured()) {
       throw new BadGatewayException({
         code: 'AI_PROVIDER_NOT_CONFIGURED',
-        message: 'ยังไม่ได้ตั้งค่า ANTHROPIC_API_KEY',
+        message: 'ยังไม่ได้ตั้งค่า OPENROUTER_API_KEY',
       });
     }
 
@@ -55,7 +54,7 @@ export class CloudinessService {
 
     const startedAt = Date.now();
     const promptVersion = PROMPT_VERSIONS.CLOUDINESS_CHECK;
-    const model = FAST_MODEL;
+    const model = this.llm.fastModel;
 
     const payload = {
       title: pr.title,
@@ -71,42 +70,25 @@ export class CloudinessService {
     };
 
     try {
-      const response = await this.anthropic.messages.create({
+      const result = await this.llm.callTool({
         model,
-        max_tokens: 2048,
-        system: [
-          { type: 'text', text: BASE_SYSTEM_PROMPT_TH, cache_control: { type: 'ephemeral' } },
-          { type: 'text', text: CLOUDINESS_CHECK_FEW_SHOT_TH, cache_control: { type: 'ephemeral' } },
-        ],
-        tools: [cloudinessCheckTool],
-        tool_choice: { type: 'tool', name: 'assess_cloudiness' },
-        messages: [
-          {
-            role: 'user',
-            content: `ตรวจคำขอซื้อต่อไปนี้:\n\`\`\`json\n${JSON.stringify(payload, null, 2)}\n\`\`\``,
-          },
-        ],
+        maxTokens: 2048,
+        systemBlocks: [BASE_SYSTEM_PROMPT_TH, CLOUDINESS_CHECK_FEW_SHOT_TH],
+        userMessage: `ตรวจคำขอซื้อต่อไปนี้:\n\`\`\`json\n${JSON.stringify(payload, null, 2)}\n\`\`\``,
+        tool: cloudinessCheckTool,
       });
 
-      const toolUse = response.content.find((c) => c.type === 'tool_use');
-      if (!toolUse || toolUse.type !== 'tool_use') {
-        throw new BadGatewayException({
-          code: 'AI_PROVIDER_ERROR',
-          message: 'AI ไม่ตอบ tool result',
-        });
-      }
-
-      const parsed = CloudinessToolOutputSchema.safeParse(toolUse.input);
+      const parsed = CloudinessToolOutputSchema.safeParse(result.toolInput);
       if (!parsed.success) {
         await this.invocations.log({
           user,
           endpoint: 'ai.check_cloudiness',
-          model,
+          model: result.model,
           promptVersion,
           input: { purchaseRequestId, payload },
-          output: toolUse.input,
-          tokenInput: response.usage.input_tokens,
-          tokenOutput: response.usage.output_tokens,
+          output: result.toolInput,
+          tokenInput: result.tokenInput,
+          tokenOutput: result.tokenOutput,
           latencyMs: Date.now() - startedAt,
           status: 'error',
           errorMessage: `schema validation failed: ${parsed.error.message}`,
@@ -120,12 +102,12 @@ export class CloudinessService {
       const invocation = await this.invocations.log({
         user,
         endpoint: 'ai.check_cloudiness',
-        model,
+        model: result.model,
         promptVersion,
         input: { purchaseRequestId, payload },
         output: parsed.data,
-        tokenInput: response.usage.input_tokens,
-        tokenOutput: response.usage.output_tokens,
+        tokenInput: result.tokenInput,
+        tokenOutput: result.tokenOutput,
         latencyMs: Date.now() - startedAt,
         status: 'success',
       });

@@ -1,4 +1,4 @@
-import type Anthropic from '@anthropic-ai/sdk';
+import type { LlmTool } from '../llm.service';
 
 export const CLOUDINESS_CHECK_FEW_SHOT_TH = `ตัวอย่างการตรวจคำขอซื้อ:
 
@@ -85,7 +85,7 @@ OUTPUT (tool input):
 }
 `;
 
-export const cloudinessCheckTool: Anthropic.Tool = {
+export const cloudinessCheckTool: LlmTool = {
   name: 'assess_cloudiness',
   description: 'ตรวจหาความคลุมเครือ/สเปกล็อกยี่ห้อ/เหตุผลขาดในคำขอซื้อ และส่งกลับ flag เป็น JSON',
   input_schema: {

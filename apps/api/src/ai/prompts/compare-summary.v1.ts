@@ -1,4 +1,4 @@
-import type Anthropic from '@anthropic-ai/sdk';
+import type { LlmTool } from '../llm.service';
 
 export const COMPARE_SUMMARY_FEW_SHOT_TH = `งานคือสรุปและแนะนำแผนการซื้อจากตารางเปรียบเทียบใบเสนอราคา
 
@@ -38,7 +38,7 @@ export const COMPARE_SUMMARY_FEW_SHOT_TH = `งานคือสรุปแล
 }
 `;
 
-export const compareSummaryTool: Anthropic.Tool = {
+export const compareSummaryTool: LlmTool = {
   name: 'summarize_comparison',
   description:
     'สรุปและแนะนำแผนการสั่งซื้อจากตารางเปรียบเทียบใบเสนอราคา (ผู้ใช้เป็นผู้ตัดสินใจสุดท้าย)',

@@ -1,12 +1,10 @@
 import {
   BadGatewayException,
   ForbiddenException,
-  Inject,
   Injectable,
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import type Anthropic from '@anthropic-ai/sdk';
 import { Prisma, RiskSeverity, RiskType } from '@ai-market/db';
 import {
   AuditScanAiToolOutputSchema,
@@ -16,7 +14,7 @@ import {
   type AuditFlagsQuery,
 } from '@ai-market/shared';
 import { PrismaService } from '../prisma/prisma.service';
-import { ANTHROPIC, DEFAULT_MODEL } from '../ai/anthropic.client';
+import { LlmService } from '../ai/llm.service';
 import { BASE_SYSTEM_PROMPT_TH } from '../ai/prompts/base-system';
 import {
   AUDIT_SCAN_FEW_SHOT_TH,
@@ -62,7 +60,7 @@ export class AuditService {
     private prisma: PrismaService,
     private heuristics: HeuristicRulesService,
     private invocations: AiInvocationService,
-    @Inject(ANTHROPIC) private anthropic: Anthropic,
+    private llm: LlmService,
   ) {}
 
   async scan(
@@ -175,7 +173,7 @@ export class AuditService {
     let aiInvocationId: string | null = null;
     let aiSummary: string | null = null;
     let aiFlags: HeuristicFlagDraft[] = [];
-    if (input.useAi !== false && process.env.ANTHROPIC_API_KEY) {
+    if (input.useAi !== false && this.llm.isConfigured()) {
       try {
         const aiResult = await this.runAi(user, prs);
         aiInvocationId = aiResult.invocationId;
@@ -291,7 +289,7 @@ export class AuditService {
   ): Promise<{ invocationId: string; summary: string; flags: HeuristicFlagDraft[] }> {
     const startedAt = Date.now();
     const promptVersion = PROMPT_VERSIONS.AUDIT_SCAN;
-    const model = DEFAULT_MODEL;
+    const model = this.llm.defaultModel;
 
     const typed = prs;
     const payload = typed.map((pr) => ({
@@ -329,36 +327,25 @@ ${JSON.stringify(payload, null, 2)}
 โปรดเรียก tool flag_risks`;
 
     try {
-      const response = await this.anthropic.messages.create({
+      const result = await this.llm.callTool({
         model,
-        max_tokens: 3072,
-        system: [
-          { type: 'text', text: BASE_SYSTEM_PROMPT_TH, cache_control: { type: 'ephemeral' } },
-          { type: 'text', text: AUDIT_SCAN_FEW_SHOT_TH, cache_control: { type: 'ephemeral' } },
-        ],
-        tools: [auditScanTool],
-        tool_choice: { type: 'tool', name: 'flag_risks' },
-        messages: [{ role: 'user', content: userMessage }],
+        maxTokens: 3072,
+        systemBlocks: [BASE_SYSTEM_PROMPT_TH, AUDIT_SCAN_FEW_SHOT_TH],
+        userMessage,
+        tool: auditScanTool,
       });
 
-      const toolUse = response.content.find((c) => c.type === 'tool_use');
-      if (!toolUse || toolUse.type !== 'tool_use') {
-        throw new BadGatewayException({
-          code: 'AI_PROVIDER_ERROR',
-          message: 'AI ไม่ตอบ tool result',
-        });
-      }
-      const parsed = AuditScanAiToolOutputSchema.safeParse(toolUse.input);
+      const parsed = AuditScanAiToolOutputSchema.safeParse(result.toolInput);
       if (!parsed.success) {
         await this.invocations.log({
           user,
           endpoint: 'ai.audit_scan',
-          model,
+          model: result.model,
           promptVersion,
           input: { prCount: typed.length },
-          output: toolUse.input,
-          tokenInput: response.usage.input_tokens,
-          tokenOutput: response.usage.output_tokens,
+          output: result.toolInput,
+          tokenInput: result.tokenInput,
+          tokenOutput: result.tokenOutput,
           latencyMs: Date.now() - startedAt,
           status: 'error',
           errorMessage: `schema validation failed: ${parsed.error.message}`,
@@ -372,12 +359,12 @@ ${JSON.stringify(payload, null, 2)}
       const invocation = await this.invocations.log({
         user,
         endpoint: 'ai.audit_scan',
-        model,
+        model: result.model,
         promptVersion,
         input: { prCount: typed.length, prIds: typed.map((p) => p.id) },
         output: parsed.data,
-        tokenInput: response.usage.input_tokens,
-        tokenOutput: response.usage.output_tokens,
+        tokenInput: result.tokenInput,
+        tokenOutput: result.tokenOutput,
         latencyMs: Date.now() - startedAt,
         status: 'success',
       });
