@@ -14,6 +14,7 @@ import { Avatar } from '@/components/ui/avatar';
 import { Icon } from '@/components/ui/icon';
 import { Button } from '@/components/ui/button';
 import { fmtNum } from '@/components/ui/format';
+import { FinancialSections, type FinancialData } from './financial-sections';
 
 interface DashboardData {
   generatedAt: string;
@@ -62,9 +63,11 @@ export default async function DashboardPage() {
     redirect('/requests');
   }
   const cookieStore = await cookies();
-  const data = await apiFetch<DashboardData>('/dashboard/director', {
-    cookie: cookieStore.toString(),
-  });
+  const cookie = cookieStore.toString();
+  const [data, financial] = await Promise.all([
+    apiFetch<DashboardData>('/dashboard/director', { cookie }),
+    apiFetch<FinancialData>('/dashboard/financial', { cookie }),
+  ]);
   const tStatus = await getTranslations('prStatus');
   const tAction = await getTranslations('auditAction');
   const tEntity = await getTranslations('entityType');
@@ -326,6 +329,8 @@ export default async function DashboardPage() {
             )}
           </Card>
         </div>
+
+        <FinancialSections data={financial} />
       </div>
     </AppShell>
   );
