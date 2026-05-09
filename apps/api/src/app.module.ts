@@ -13,6 +13,8 @@ import { ProjectsModule } from './projects/projects.module';
 import { BudgetSourcesModule } from './budget-sources/budget-sources.module';
 import { BudgetsModule } from './budgets/budgets.module';
 import { RuleConfigsModule } from './rule-configs/rule-configs.module';
+import { VendorsModule } from './vendors/vendors.module';
+import { QuotationsModule } from './quotations/quotations.module';
 import { HealthController } from './health/health.controller';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
@@ -36,6 +38,8 @@ import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
     BudgetSourcesModule,
     BudgetsModule,
     RuleConfigsModule,
+    VendorsModule,
+    QuotationsModule,
   ],
   controllers: [HealthController],
   providers: [

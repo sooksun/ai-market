@@ -5,16 +5,20 @@ import { ParseItemsService } from './services/parse-items.service';
 import { CloudinessService } from './services/cloudiness.service';
 import { FileParserService } from './services/file-parser.service';
 import { SpecWriterService } from './services/spec-writer.service';
+import { CompareSummaryService } from './services/compare-summary.service';
 import { AiInvocationService } from './ai-invocation.service';
+import { QuotationsModule } from '../quotations/quotations.module';
 import { ANTHROPIC, createAnthropic } from './anthropic.client';
 
 @Module({
+  imports: [QuotationsModule],
   controllers: [AiController],
   providers: [
     ParseItemsService,
     CloudinessService,
     FileParserService,
     SpecWriterService,
+    CompareSummaryService,
     AiInvocationService,
     {
       provide: ANTHROPIC,
@@ -23,6 +27,12 @@ import { ANTHROPIC, createAnthropic } from './anthropic.client';
         createAnthropic(config.get<string>('ANTHROPIC_API_KEY')),
     },
   ],
-  exports: [ParseItemsService, CloudinessService, SpecWriterService, AiInvocationService],
+  exports: [
+    ParseItemsService,
+    CloudinessService,
+    SpecWriterService,
+    CompareSummaryService,
+    AiInvocationService,
+  ],
 })
 export class AiModule {}

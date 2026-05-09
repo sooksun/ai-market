@@ -160,3 +160,54 @@ export const ApplySpecificationsSchema = z.object({
     .max(50),
 });
 export type ApplySpecificationsInput = z.infer<typeof ApplySpecificationsSchema>;
+
+// ─────────────────────────────────────────────
+// Compare Summary
+// ─────────────────────────────────────────────
+
+export const CompareSummaryLinePickSchema = z.object({
+  itemId: z.string(),
+  quotationId: z.string(),
+  unitPrice: z.number(),
+  vendorName: z.string(),
+});
+
+export const CompareSummaryToolOutputSchema = z.object({
+  bestOverall: z
+    .object({
+      quotationId: z.string(),
+      reason: z.string(),
+      totalAmount: z.number(),
+      concerns: z.array(z.string()),
+    })
+    .nullable()
+    .optional(),
+  bestPerItem: z
+    .object({
+      linePicks: z.array(CompareSummaryLinePickSchema),
+      totalAmount: z.number(),
+      vendorCount: z.number(),
+      concerns: z.array(z.string()),
+    })
+    .nullable()
+    .optional(),
+  comparison: z.object({
+    savings: z.number().optional(),
+    savingsPct: z.number().optional(),
+    recommendation: z.enum(['best_overall', 'best_per_item', 'inconclusive']),
+    rationale: z.string(),
+  }),
+  warnings: z.array(z.string()),
+  confidence: z.number().min(0).max(1),
+});
+export type CompareSummaryToolOutput = z.infer<typeof CompareSummaryToolOutputSchema>;
+
+export const CompareSummaryInputSchema = z.object({
+  purchaseRequestId: z.string().min(1),
+});
+export type CompareSummaryInput = z.infer<typeof CompareSummaryInputSchema>;
+
+export const CompareSummaryResponseSchema = CompareSummaryToolOutputSchema.extend({
+  invocationId: z.string(),
+});
+export type CompareSummaryResponse = z.infer<typeof CompareSummaryResponseSchema>;

@@ -89,6 +89,13 @@ const NAV: NavDef[] = [
     rolesAny: ['AUDITOR', 'DIRECTOR', 'ADMIN'],
   },
   {
+    href: '/admin/vendors',
+    labelKey: 'adminVendors',
+    icon: 'store',
+    group: 'audit',
+    rolesAny: ['PROCUREMENT', 'ADMIN'],
+  },
+  {
     href: '/admin/projects',
     labelKey: 'adminProjects',
     icon: 'folder-kanban',

@@ -198,6 +198,16 @@ export default async function RequestDetailPage({
                   พิมพ์ / PDF
                 </Button>
               </Link>
+              {(pr.status === 'APPROVED_FOR_COMPARISON' ||
+                pr.status === 'IN_COMPARISON' ||
+                pr.status === 'PENDING_APPROVAL' ||
+                pr.status === 'APPROVED') && (
+                <Link href={`/compare?prId=${pr.id}` as never}>
+                  <Button size="sm" icon="Scale">
+                    เปรียบเทียบราคา
+                  </Button>
+                </Link>
+              )}
             </>
           }
         />

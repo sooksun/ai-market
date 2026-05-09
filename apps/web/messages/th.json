@@ -18,6 +18,7 @@
     "inventory": "ทะเบียนพัสดุ",
     "finance": "งานการเงิน",
     "auditLogs": "Audit Logs",
+    "adminVendors": "ผู้ขาย",
     "adminProjects": "โครงการ",
     "adminBudgetSources": "แหล่งงบประมาณ",
     "adminBudgets": "จัดสรรงบ",

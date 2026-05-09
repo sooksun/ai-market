@@ -174,8 +174,60 @@ async function main() {
     }
   }
 
+  // Phase 3: sample vendors
+  const vendorSeeds: Array<{
+    id: string;
+    name: string;
+    taxId: string | null;
+    phone: string | null;
+    rating: number;
+  }> = [
+    {
+      id: 'seed-vendor-sis',
+      name: 'บริษัท เอสไอเอส ดิสทริบิวชั่น จำกัด',
+      taxId: '0105541081234',
+      phone: '02-555-1234',
+      rating: 4.7,
+    },
+    {
+      id: 'seed-vendor-itpro',
+      name: 'ห้างหุ้นส่วน ไอที โปร',
+      taxId: '0993000067890',
+      phone: '02-666-5678',
+      rating: 4.4,
+    },
+    {
+      id: 'seed-vendor-ccnt',
+      name: 'บริษัท คอมพิวเตอร์เซ็นเตอร์ จำกัด',
+      taxId: '0105533099999',
+      phone: '02-777-1111',
+      rating: 4.1,
+    },
+    {
+      id: 'seed-vendor-tk',
+      name: 'ร้าน ทีเค คอมพิวเตอร์',
+      taxId: null,
+      phone: '081-234-5678',
+      rating: 3.6,
+    },
+  ];
+  for (const v of vendorSeeds) {
+    await prisma.vendor.upsert({
+      where: { id: v.id },
+      update: {},
+      create: {
+        id: v.id,
+        schoolId: school.id,
+        name: v.name,
+        taxId: v.taxId,
+        phone: v.phone,
+        rating: v.rating,
+      },
+    });
+  }
+
   console.log(
-    `Seeded school "${school.name}" (id=${school.id}) + ${seedUsers.length} users + ${ruleSeeds.length} rules + ${projectSeeds.length} projects + ${budgetSeeds.length} budget sources + ${allocCount} budget allocations`,
+    `Seeded school "${school.name}" (id=${school.id}) + ${seedUsers.length} users + ${ruleSeeds.length} rules + ${projectSeeds.length} projects + ${budgetSeeds.length} budget sources + ${allocCount} budget allocations + ${vendorSeeds.length} vendors`,
   );
   console.log(`Default password for all seeded users: ${DEFAULT_PASSWORD}`);
 }
