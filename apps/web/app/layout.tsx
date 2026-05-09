@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Sarabun, JetBrains_Mono } from 'next/font/google';
 import { NextIntlClientProvider } from 'next-intl';
 import { getLocale, getMessages } from 'next-intl/server';
+import { CsrfFetchPatch } from '@/components/csrf-fetch-patch';
 import './globals.css';
 
 const sarabun = Sarabun({
@@ -41,6 +42,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         />
       </head>
       <body>
+        <CsrfFetchPatch />
         <NextIntlClientProvider locale={locale} messages={messages} timeZone="Asia/Bangkok">
           {children}
         </NextIntlClientProvider>

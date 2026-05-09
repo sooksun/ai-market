@@ -10,6 +10,7 @@ import {
   UseGuards,
   UnauthorizedException,
 } from '@nestjs/common';
+import * as crypto from 'crypto';
 import type { Request, Response } from 'express';
 import {
   LoginInputSchema,
@@ -18,30 +19,38 @@ import {
   type SwitchTenantInput,
   type TenantsResponse,
 } from '@ai-market/shared';
-import { AuthService } from './auth.service';
+import { AuthService, type IssueContext } from './auth.service';
 import { Public } from '../common/decorators/public.decorator';
 import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe';
 import { CurrentUser, type AuthenticatedUser } from '../common/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
+import { CsrfExempt } from '../common/decorators/csrf-exempt.decorator';
 
 const ACCESS_COOKIE = 'aim_session';
 const REFRESH_COOKIE = 'aim_refresh';
+const CSRF_COOKIE = 'aim_csrf';
+
+const ACCESS_TTL_MS = 15 * 60 * 1000;
+const REFRESH_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 @Controller('auth')
 export class AuthController {
   constructor(private auth: AuthService) {}
 
   @Public()
+  @CsrfExempt()
   @Post('login')
   @HttpCode(HttpStatus.OK)
   async login(
+    @Req() req: Request,
     @Body(new ZodValidationPipe(LoginInputSchema)) body: LoginInput,
     @Res({ passthrough: true }) res: Response,
   ) {
     const user = await this.auth.validateCredentials(body.email, body.password);
-    const tokens = this.auth.signTokens(user);
+    const tokens = await this.auth.issueTokens(user, undefined, this.ctx(req));
 
     this.setAuthCookies(res, tokens.accessToken, tokens.refreshToken);
+    this.setCsrfCookie(res);
 
     return {
       user: {
@@ -56,6 +65,7 @@ export class AuthController {
   }
 
   @Public()
+  @CsrfExempt()
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
   async refresh(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
@@ -64,21 +74,24 @@ export class AuthController {
     if (!refreshToken) {
       throw new UnauthorizedException({ code: 'UNAUTHENTICATED', message: 'no refresh token' });
     }
-    const payload = this.auth.verifyRefresh(refreshToken);
-    const user = await this.auth.getUserWithRoles(payload.sub);
-    if (!user || !user.active) {
-      throw new UnauthorizedException({ code: 'UNAUTHENTICATED', message: 'invalid session' });
-    }
-    const tokens = this.auth.signTokens(user);
+    const tokens = await this.auth.rotateRefresh(refreshToken, this.ctx(req));
     this.setAuthCookies(res, tokens.accessToken, tokens.refreshToken);
+    this.setCsrfCookie(res);
     return { ok: true };
   }
 
+  @CsrfExempt()
   @Post('logout')
   @HttpCode(HttpStatus.NO_CONTENT)
-  async logout(@Res({ passthrough: true }) res: Response) {
+  async logout(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
+    const cookies = (req as unknown as { cookies?: Record<string, string> }).cookies;
+    const refreshToken = cookies?.[REFRESH_COOKIE];
+    if (refreshToken) {
+      await this.auth.revokeRefresh(refreshToken);
+    }
     res.clearCookie(ACCESS_COOKIE, { httpOnly: true, sameSite: 'lax', path: '/' });
     res.clearCookie(REFRESH_COOKIE, { httpOnly: true, sameSite: 'lax', path: '/' });
+    res.clearCookie(CSRF_COOKIE, { sameSite: 'lax', path: '/' });
   }
 
   @UseGuards(JwtAuthGuard)
@@ -123,6 +136,7 @@ export class AuthController {
   async switchTenant(
     @CurrentUser() user: AuthenticatedUser,
     @Body(new ZodValidationPipe(SwitchTenantInputSchema)) body: SwitchTenantInput,
+    @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ) {
     await this.auth.assertCanAccessSchool(user.id, body.schoolId);
@@ -130,9 +144,25 @@ export class AuthController {
     if (!dbUser) {
       throw new UnauthorizedException({ code: 'UNAUTHENTICATED', message: 'session หมดอายุ' });
     }
-    const tokens = this.auth.signTokens(dbUser, body.schoolId);
+    // Best-effort revoke of the previous refresh so the old session can't be
+    // resurrected from a leaked cookie.
+    const cookies = (req as unknown as { cookies?: Record<string, string> }).cookies;
+    if (cookies?.[REFRESH_COOKIE]) {
+      await this.auth.revokeRefresh(cookies[REFRESH_COOKIE]);
+    }
+    const tokens = await this.auth.issueTokens(dbUser, body.schoolId, this.ctx(req));
     this.setAuthCookies(res, tokens.accessToken, tokens.refreshToken);
+    this.setCsrfCookie(res);
     return { ok: true, schoolId: body.schoolId };
+  }
+
+  private ctx(req: Request): IssueContext {
+    const xff = req.headers['x-forwarded-for'];
+    const xffStr = Array.isArray(xff) ? xff[0] : xff;
+    return {
+      ip: (xffStr ?? req.ip ?? null) as string | null,
+      userAgent: (req.headers['user-agent'] as string | undefined) ?? null,
+    };
   }
 
   private setAuthCookies(res: Response, access: string, refresh: string) {
@@ -142,14 +172,26 @@ export class AuthController {
       sameSite: 'lax',
       secure: isProd,
       path: '/',
-      maxAge: 15 * 60 * 1000,
+      maxAge: ACCESS_TTL_MS,
     });
     res.cookie(REFRESH_COOKIE, refresh, {
       httpOnly: true,
       sameSite: 'lax',
       secure: isProd,
       path: '/',
-      maxAge: 7 * 24 * 60 * 60 * 1000,
+      maxAge: REFRESH_TTL_MS,
+    });
+  }
+
+  /** Set the double-submit CSRF token (NOT httpOnly so JS can echo it). */
+  private setCsrfCookie(res: Response) {
+    const isProd = process.env.NODE_ENV === 'production';
+    res.cookie(CSRF_COOKIE, crypto.randomBytes(24).toString('base64url'), {
+      httpOnly: false,
+      sameSite: 'lax',
+      secure: isProd,
+      path: '/',
+      maxAge: REFRESH_TTL_MS,
     });
   }
 }
