@@ -269,6 +269,129 @@ export class BudgetsService {
     return released;
   }
 
+  /**
+   * Convert outstanding HOLD into COMMIT for a PR. Called when the PR is
+   * fully approved by the workflow. Idempotent: skips if a COMMIT already
+   * exists for this PR.
+   */
+  async commitForPr(purchaseRequestId: string, userId?: string): Promise<number> {
+    const existingCommit = await this.prisma.budgetMovement.findFirst({
+      where: {
+        type: 'COMMIT',
+        refType: 'PurchaseRequest',
+        refId: purchaseRequestId,
+      },
+    });
+    if (existingCommit) return 0;
+
+    const movements = await this.prisma.budgetMovement.findMany({
+      where: {
+        refType: 'PurchaseRequest',
+        refId: purchaseRequestId,
+        type: { in: ['HOLD', 'RELEASE'] },
+      },
+    });
+    const heldByBudget = new Map<string, Prisma.Decimal>();
+    for (const m of movements) {
+      const cur = heldByBudget.get(m.budgetId) ?? new Prisma.Decimal(0);
+      heldByBudget.set(
+        m.budgetId,
+        m.type === 'HOLD' ? cur.plus(m.amount) : cur.minus(m.amount),
+      );
+    }
+
+    let committed = 0;
+    for (const [budgetId, remaining] of heldByBudget) {
+      if (remaining.greaterThan(0)) {
+        await this.prisma.$transaction([
+          // Release the HOLD
+          this.prisma.budgetMovement.create({
+            data: {
+              budgetId,
+              type: 'RELEASE',
+              amount: remaining,
+              refType: 'PurchaseRequest',
+              refId: purchaseRequestId,
+              note: 'auto: convert to COMMIT on approval',
+              createdById: userId,
+            },
+          }),
+          // Create the COMMIT
+          this.prisma.budgetMovement.create({
+            data: {
+              budgetId,
+              type: 'COMMIT',
+              amount: remaining,
+              refType: 'PurchaseRequest',
+              refId: purchaseRequestId,
+              createdById: userId,
+            },
+          }),
+        ]);
+        committed++;
+      }
+    }
+    return committed;
+  }
+
+  /**
+   * Record actual payment. Creates a SPEND movement equal to the paid
+   * amount on the same budget where the PR was committed. The existing
+   * COMMIT row is left in place (append-only log) — `computeBalance`
+   * nets COMMIT − SPEND so a fully-paid PR no longer shows up under
+   * "committed" but does show under "spent". Idempotent: skips if SPEND
+   * already exists for this PR.
+   */
+  async spendForPr(
+    purchaseRequestId: string,
+    paidAmount: Prisma.Decimal,
+    userId?: string,
+  ): Promise<number> {
+    if (paidAmount.lessThanOrEqualTo(0)) return 0;
+    const existingSpend = await this.prisma.budgetMovement.findFirst({
+      where: {
+        type: 'SPEND',
+        refType: 'PurchaseRequest',
+        refId: purchaseRequestId,
+      },
+    });
+    if (existingSpend) return 0;
+
+    const commits = await this.prisma.budgetMovement.findMany({
+      where: {
+        type: 'COMMIT',
+        refType: 'PurchaseRequest',
+        refId: purchaseRequestId,
+      },
+    });
+    if (commits.length === 0) return 0;
+
+    // Create one SPEND per committed budget. If multiple commits exist
+    // (rare), split paidAmount proportionally.
+    const totalCommitted = commits.reduce(
+      (acc, c) => acc.plus(c.amount),
+      new Prisma.Decimal(0),
+    );
+    let spent = 0;
+    for (const c of commits) {
+      const share = totalCommitted.greaterThan(0)
+        ? paidAmount.times(c.amount).dividedBy(totalCommitted)
+        : paidAmount;
+      await this.prisma.budgetMovement.create({
+        data: {
+          budgetId: c.budgetId,
+          type: 'SPEND',
+          amount: share,
+          refType: 'PurchaseRequest',
+          refId: purchaseRequestId,
+          createdById: userId,
+        },
+      });
+      spent++;
+    }
+    return spent;
+  }
+
   // ─────────────── Internal ───────────────
 
   private async computeBalance(budgetId: string): Promise<BudgetBalance> {
@@ -282,10 +405,13 @@ export class BudgetsService {
       sums.find((s) => s.type === t)?._sum.amount ?? new Prisma.Decimal(0);
 
     const held = get('HOLD').minus(get('RELEASE'));
-    const committed = get('COMMIT');
+    const totalCommit = get('COMMIT');
     const spent = get('SPEND');
+    // SPEND consumes COMMIT — display "committed" = outstanding only.
+    const committed = totalCommit.minus(spent);
+    const committedShown = committed.greaterThan(0) ? committed : new Prisma.Decimal(0);
     const allocated = budget.allocated;
-    const available = allocated.minus(held).minus(committed).minus(spent);
+    const available = allocated.minus(held).minus(committedShown).minus(spent);
 
     return {
       budgetId: budget.id,
@@ -294,7 +420,7 @@ export class BudgetsService {
       fiscalYear: budget.fiscalYear,
       allocated: allocated.toString(),
       held: held.toString(),
-      committed: committed.toString(),
+      committed: committedShown.toString(),
       spent: spent.toString(),
       available: available.toString(),
     };

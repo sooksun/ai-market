@@ -21,6 +21,7 @@ import { ProcurementRulesModule } from './procurement-rules/procurement-rules.mo
 import { ReceivingsModule } from './receivings/receivings.module';
 import { InventoryModule } from './inventory/inventory.module';
 import { AssetsModule } from './assets/assets.module';
+import { FinanceModule } from './finance/finance.module';
 import { HealthController } from './health/health.controller';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
@@ -52,6 +53,7 @@ import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
     ReceivingsModule,
     InventoryModule,
     AssetsModule,
+    FinanceModule,
   ],
   controllers: [HealthController],
   providers: [

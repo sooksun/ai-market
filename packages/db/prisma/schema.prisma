@@ -330,6 +330,7 @@ model PurchaseRequest {
   quotations   VendorQuotation[]
   approval     ApprovalWorkflow?
   receiving    ReceivingRecord?
+  voucher      FinanceVoucher?
 
   @@unique([schoolId, docNo])
   @@index([schoolId, status, createdAt])
@@ -617,6 +618,48 @@ model ProcurementDocument {
   @@index([schoolId, refType, refId])
   @@index([templateKey, generatedAt])
   @@map("procurement_documents")
+}
+
+// ─────────────────────────────────────────────
+// Phase 4C — Finance vouchers & payments
+// ─────────────────────────────────────────────
+
+enum VoucherStatus {
+  PENDING
+  ISSUED
+  PAID
+  CANCELLED
+}
+
+model FinanceVoucher {
+  id                String        @id @default(cuid())
+  schoolId          String        @map("school_id")
+  purchaseRequestId String        @unique @map("purchase_request_id")
+  voucherNumber     String?       @map("voucher_number")
+  totalAmount       Decimal       @map("total_amount") @db.Decimal(15, 2)
+  status            VoucherStatus @default(PENDING)
+  notes             String?       @db.Text
+
+  issuedAt   DateTime? @map("issued_at")
+  issuedById String?   @map("issued_by_id")
+
+  paidAt        DateTime? @map("paid_at")
+  paidById      String?   @map("paid_by_id")
+  paymentRef    String?   @map("payment_ref")
+  paymentMethod String?   @map("payment_method")
+
+  cancelledAt   DateTime? @map("cancelled_at")
+  cancelledById String?   @map("cancelled_by_id")
+  cancelReason  String?   @map("cancel_reason") @db.Text
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  purchaseRequest PurchaseRequest @relation(fields: [purchaseRequestId], references: [id], onDelete: Cascade)
+
+  @@unique([schoolId, voucherNumber])
+  @@index([schoolId, status])
+  @@map("finance_vouchers")
 }
 
 // ─────────────────────────────────────────────

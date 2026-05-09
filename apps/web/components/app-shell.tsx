@@ -85,7 +85,7 @@ const NAV: NavDef[] = [
     labelKey: 'finance',
     icon: 'banknote',
     group: 'ops',
-    comingSoon: true,
+    rolesAny: ['FINANCE', 'DIRECTOR', 'ADMIN'],
   },
   // audit & system
   {

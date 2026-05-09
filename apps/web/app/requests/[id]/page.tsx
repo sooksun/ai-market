@@ -270,6 +270,13 @@ export default async function RequestDetailPage({
                   </Button>
                 </Link>
               )}
+              {(pr.status === 'RECEIVED' || pr.status === 'CLOSED') && (
+                <Link href={`/finance/${pr.id}` as never}>
+                  <Button size="sm" icon="Banknote">
+                    ใบสำคัญ
+                  </Button>
+                </Link>
+              )}
             </>
           }
         />
