@@ -13,6 +13,7 @@ import type {
 } from '@ai-market/shared';
 import { PrismaService } from '../prisma/prisma.service';
 import { BudgetsService } from '../budgets/budgets.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import type { AuthenticatedUser } from '../common/decorators/current-user.decorator';
 
 @Injectable()
@@ -22,6 +23,7 @@ export class FinanceService {
   constructor(
     private prisma: PrismaService,
     private budgets: BudgetsService,
+    private notifications: NotificationsService,
   ) {}
 
   // ─── Voucher creation / lookup ────────────────────────────
@@ -194,6 +196,32 @@ export class FinanceService {
     } catch (err) {
       this.logger.warn(
         `budget SPEND failed after voucher payment for PR ${prId}: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
+
+    // Notify the requester that their PR has been paid.
+    try {
+      const pr = await this.prisma.purchaseRequest.findUnique({
+        where: { id: prId },
+        select: { schoolId: true, requesterId: true, docNo: true, title: true },
+      });
+      if (pr) {
+        this.notifications.notifySafe({
+          schoolId: pr.schoolId,
+          userId: pr.requesterId,
+          type: 'PR_PAID',
+          title: `เบิกจ่ายเสร็จสิ้น · ${pr.docNo ?? pr.title}`,
+          body: input.paymentRef
+            ? `อ้างอิง ${input.paymentRef} (${input.paymentMethod})`
+            : `วิธีจ่าย: ${input.paymentMethod}`,
+          refType: 'PurchaseRequest',
+          refId: prId,
+          actorId: user.id,
+        });
+      }
+    } catch (err) {
+      this.logger.warn(
+        `notify on voucher pay failed for PR ${prId}: ${err instanceof Error ? err.message : String(err)}`,
       );
     }
     return result;

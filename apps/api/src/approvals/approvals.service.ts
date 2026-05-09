@@ -180,6 +180,16 @@ export class ApprovalsService {
       return { result, isLastStep };
     }).then(async ({ result, isLastStep }) => {
       if (isLastStep) {
+        // HOLD → COMMIT once the PR is fully approved. Best-effort: log
+        // and continue if the budget movement fails so we don't leave the
+        // workflow in an inconsistent state.
+        try {
+          await this.budgets.commitForPr(prId, user.id);
+        } catch (err) {
+          this.logger.warn(
+            `budget COMMIT failed after final approve for PR ${prId}: ${err instanceof Error ? err.message : String(err)}`,
+          );
+        }
         await this.notifyRequester(
           prId,
           'PR_APPROVED',

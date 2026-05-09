@@ -2,19 +2,30 @@ import {
   ConflictException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
-import { Prisma, PurchaseRequestStatus, ReceivingStatus } from '@ai-market/db';
+import { ItemClass, Prisma, PurchaseRequestStatus, ReceivingStatus } from '@ai-market/db';
 import type {
   FinalizeReceivingInput,
   RecordReceivingItemInput,
 } from '@ai-market/shared';
 import { PrismaService } from '../prisma/prisma.service';
+import { InventoryService } from '../inventory/inventory.service';
+import { AssetsService } from '../assets/assets.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import type { AuthenticatedUser } from '../common/decorators/current-user.decorator';
 
 @Injectable()
 export class ReceivingsService {
-  constructor(private prisma: PrismaService) {}
+  private readonly logger = new Logger(ReceivingsService.name);
+
+  constructor(
+    private prisma: PrismaService,
+    private inventory: InventoryService,
+    private assets: AssetsService,
+    private notifications: NotificationsService,
+  ) {}
 
   /**
    * Start a receiving record for a PR. Allowed when PR is APPROVED or already
@@ -152,7 +163,21 @@ export class ReceivingsService {
     this.requireRole(user, ['INSPECTOR', 'PROCUREMENT', 'ADMIN']);
     const record = await this.prisma.receivingRecord.findUnique({
       where: { purchaseRequestId: prId },
-      include: { items: true },
+      include: {
+        items: {
+          include: {
+            purchaseRequestItem: {
+              select: {
+                id: true,
+                name: true,
+                unit: true,
+                unitPriceEst: true,
+                classifiedType: true,
+              },
+            },
+          },
+        },
+      },
     });
     if (!record) {
       throw new NotFoundException({
@@ -170,7 +195,27 @@ export class ReceivingsService {
       });
     }
 
-    return this.prisma.$transaction(async (tx) => {
+    // Look up the selected vendor name + PR meta — needed to seed the asset
+    // register. Done outside the tx so we keep tx small.
+    const pr = await this.prisma.purchaseRequest.findUniqueOrThrow({
+      where: { id: prId },
+      select: {
+        id: true,
+        schoolId: true,
+        docNo: true,
+        title: true,
+        requesterId: true,
+        quotations: {
+          where: { status: 'SELECTED' },
+          take: 1,
+          select: { vendor: { select: { name: true } } },
+        },
+      },
+    });
+    const vendorName = pr.quotations[0]?.vendor.name ?? null;
+    const acquisitionDate = new Date();
+
+    const result = await this.prisma.$transaction(async (tx) => {
       const updated = await tx.receivingRecord.update({
         where: { id: record.id },
         data: {
@@ -196,8 +241,87 @@ export class ReceivingsService {
           data: { status: prTarget },
         });
       }
+
+      // Phase 4B integration: only auto-create stock/asset rows when the
+      // receiving was accepted (COMPLETE / PARTIAL). REJECTED leaves the
+      // ledger untouched.
+      if (input.decision === 'COMPLETE' || input.decision === 'PARTIAL') {
+        for (const ri of record.items) {
+          // Skip items that didn't actually arrive in usable shape.
+          if (ri.condition === 'NOT_RECEIVED' || ri.condition === 'WRONG_SPEC') continue;
+          const qtyDec = ri.quantityReceived;
+          if (!qtyDec) continue;
+          const qtyNum = Number(qtyDec);
+          if (!Number.isFinite(qtyNum) || qtyNum <= 0) continue;
+
+          const prItem = ri.purchaseRequestItem;
+          const cls = prItem.classifiedType;
+
+          if (cls === ItemClass.SERVICE) {
+            // Services don't go to stock or asset register.
+            continue;
+          }
+
+          if (cls === ItemClass.ASSET) {
+            // Assets register one row per unit; floor non-integer quantities.
+            const intQty = Math.floor(qtyNum);
+            if (intQty <= 0) continue;
+            await this.assets.registerForReceiving(
+              tx,
+              user.schoolId,
+              ri.id,
+              { id: pr.id, vendorName },
+              {
+                name: prItem.name,
+                unitPriceEst: prItem.unitPriceEst,
+                quantity: intQty,
+              },
+              acquisitionDate,
+            );
+          } else {
+            // MATERIAL / UNCLASSIFIED → stock IN.
+            const inv = await this.inventory.findOrCreateItem(
+              tx,
+              user.schoolId,
+              prItem.name,
+              prItem.unit,
+            );
+            await this.inventory.addStockIn(
+              tx,
+              user.schoolId,
+              inv.id,
+              qtyDec,
+              {
+                refType: 'ReceivingItem',
+                refId: ri.id,
+                unitCost: prItem.unitPriceEst,
+              },
+              user.id,
+            );
+          }
+        }
+      }
+
       return updated;
     });
+
+    // Notify the requester after the tx commits.
+    if (input.decision === 'COMPLETE' || input.decision === 'PARTIAL') {
+      this.notifications.notifySafe({
+        schoolId: pr.schoolId,
+        userId: pr.requesterId,
+        type: 'PR_RECEIVED',
+        title:
+          input.decision === 'PARTIAL'
+            ? `ตรวจรับบางส่วน · ${pr.docNo ?? pr.title}`
+            : `ตรวจรับเสร็จสิ้น · ${pr.docNo ?? pr.title}`,
+        body: input.comment ?? null,
+        refType: 'PurchaseRequest',
+        refId: prId,
+        actorId: user.id,
+      });
+    }
+    return result;
   }
 
   /** Inspector inbox — PRs that are APPROVED/IN_RECEIVING and need inspection. */
