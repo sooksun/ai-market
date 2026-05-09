@@ -63,7 +63,7 @@ function LoginForm() {
             width={814}
             height={220}
             priority
-            className="h-auto w-[260px] drop-shadow-sm"
+            className="h-auto w-[300px] drop-shadow-sm"
           />
           <p className="mt-2 text-xs text-ink-400 dark:text-ink-300">
             เข้าสู่ระบบเพื่อเริ่มใช้งาน

@@ -117,7 +117,7 @@ export function AppShellClient({
               width={814}
               height={220}
               priority
-              className="h-10 w-auto drop-shadow-sm"
+              className="h-12 w-auto drop-shadow-sm"
             />
           )}
         </div>
