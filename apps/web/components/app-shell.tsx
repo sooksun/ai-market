@@ -64,14 +64,21 @@ const NAV: NavDef[] = [
     labelKey: 'receiving',
     icon: 'package-check',
     group: 'ops',
-    comingSoon: true,
+    rolesAny: ['INSPECTOR', 'PROCUREMENT', 'DIRECTOR', 'ADMIN'],
   },
   {
     href: '/inventory',
     labelKey: 'inventory',
     icon: 'boxes',
     group: 'ops',
-    comingSoon: true,
+    rolesAny: ['PROCUREMENT', 'INSPECTOR', 'FINANCE', 'DIRECTOR', 'AUDITOR', 'ADMIN'],
+  },
+  {
+    href: '/assets',
+    labelKey: 'assets',
+    icon: 'qr-code',
+    group: 'ops',
+    rolesAny: ['PROCUREMENT', 'INSPECTOR', 'FINANCE', 'DIRECTOR', 'AUDITOR', 'ADMIN'],
   },
   {
     href: '/finance',

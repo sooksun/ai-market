@@ -620,6 +620,93 @@ model ProcurementDocument {
 }
 
 // ─────────────────────────────────────────────
+// Phase 4B — Inventory + Asset Register
+// ─────────────────────────────────────────────
+
+enum StockMovementType {
+  IN
+  OUT
+  ADJUST
+  WRITE_OFF
+}
+
+enum AssetStatus {
+  ACTIVE
+  STORED
+  REPAIR
+  DISPOSED
+}
+
+model InventoryItem {
+  id           String   @id @default(cuid())
+  schoolId     String   @map("school_id")
+  name         String
+  unit         String
+  category     String?
+  currentQty   Decimal  @default(0) @map("current_qty") @db.Decimal(15, 2)
+  reorderPoint Decimal? @map("reorder_point") @db.Decimal(15, 2)
+  notes        String?  @db.Text
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  movements StockMovement[]
+
+  @@unique([schoolId, name, unit])
+  @@index([schoolId, active])
+  @@map("inventory_items")
+}
+
+model StockMovement {
+  id              String            @id @default(cuid())
+  schoolId        String            @map("school_id")
+  inventoryItemId String            @map("inventory_item_id")
+  type            StockMovementType
+  quantity        Decimal           @db.Decimal(15, 2)
+  refType         String?           @map("ref_type") // 'ReceivingItem' / 'Issue' / etc
+  refId           String?           @map("ref_id")
+  unitCost        Decimal?          @map("unit_cost") @db.Decimal(15, 2)
+  notes           String?           @db.Text
+  createdById     String?           @map("created_by_id")
+  createdAt       DateTime          @default(now()) @map("created_at")
+
+  inventoryItem InventoryItem @relation(fields: [inventoryItemId], references: [id], onDelete: Cascade)
+
+  @@index([inventoryItemId, createdAt])
+  @@index([refType, refId])
+  @@index([schoolId, createdAt])
+  @@map("stock_movements")
+}
+
+model AssetRegister {
+  id                String      @id @default(cuid())
+  schoolId          String      @map("school_id")
+  assetNumber       String      @map("asset_number")
+  name              String
+  category          String?
+  acquisitionCost   Decimal     @map("acquisition_cost") @db.Decimal(15, 2)
+  acquisitionDate   DateTime    @map("acquisition_date")
+  serialNumber      String?     @map("serial_number")
+  vendorName        String?     @map("vendor_name")
+  location          String?
+  custodianId       String?     @map("custodian_id")
+  status            AssetStatus @default(ACTIVE)
+  qrCode            String?     @unique @map("qr_code")
+  purchaseRequestId String?     @map("purchase_request_id")
+  receivingItemId   String?     @map("receiving_item_id")
+  notes             String?     @db.Text
+  active            Boolean     @default(true)
+  createdAt         DateTime    @default(now()) @map("created_at")
+  updatedAt         DateTime    @updatedAt @map("updated_at")
+
+  @@unique([schoolId, assetNumber])
+  @@index([schoolId, status])
+  @@index([category])
+  @@index([purchaseRequestId])
+  @@map("asset_registers")
+}
+
+// ─────────────────────────────────────────────
 // Phase 4A — Receiving & Inspection
 // ─────────────────────────────────────────────
 

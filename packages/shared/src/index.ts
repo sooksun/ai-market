@@ -10,3 +10,4 @@ export * from './approval';
 export * from './document';
 export * from './procurement-rules';
 export * from './receiving';
+export * from './inventory';
