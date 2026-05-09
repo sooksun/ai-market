@@ -102,23 +102,25 @@ export function AppShellClient({
           collapsed ? 'w-[72px]' : 'w-[260px]',
         )}
       >
-        <div className="h-16 flex items-center gap-2.5 px-4 border-b border-ink-100 dark:border-white/5">
-          <Image
-            src="/finprocure-icon.png"
-            alt={brand.name}
-            width={36}
-            height={36}
-            className="shrink-0 drop-shadow-sm"
-          />
-          {!collapsed && (
-            <div className="min-w-0">
-              <div className="text-[15px] font-bold tracking-tight text-ink-900 dark:text-white leading-tight truncate">
-                FinProcure <span className="text-brand-600 dark:text-brand-300">AI</span>
-              </div>
-              <div className="text-[11px] text-ink-400 dark:text-ink-300 truncate">
-                {brand.tagline}
-              </div>
-            </div>
+        <div className="h-16 flex items-center px-4 border-b border-ink-100 dark:border-white/5">
+          {collapsed ? (
+            <Image
+              src="/finprocure-icon.png"
+              alt={brand.name}
+              width={226}
+              height={220}
+              priority
+              className="h-9 w-auto drop-shadow-sm"
+            />
+          ) : (
+            <Image
+              src="/finprocure-fullmark.png"
+              alt={`${brand.name} · ${brand.tagline}`}
+              width={814}
+              height={220}
+              priority
+              className="h-10 w-auto drop-shadow-sm"
+            />
           )}
         </div>
         <nav

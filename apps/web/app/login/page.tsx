@@ -56,20 +56,18 @@ function LoginForm() {
         onSubmit={onSubmit}
         className="relative z-10 w-full max-w-sm rounded-2xl bg-white/90 dark:bg-ink-800/80 backdrop-blur-sm border border-ink-100 dark:border-white/5 shadow-pop p-8"
       >
-        <div className="flex items-center gap-3">
+        <div className="flex flex-col items-center text-center">
           <Image
-            src="/finprocure-icon.png"
-            alt="FinProcure AI"
-            width={44}
-            height={44}
-            className="drop-shadow-sm"
+            src="/finprocure-fullmark.png"
+            alt="FinProcure AI · การเงินพัสดุอัจฉริยะ"
+            width={814}
+            height={220}
+            priority
+            className="h-auto w-[260px] drop-shadow-sm"
           />
-          <div>
-            <h1 className="text-xl font-bold tracking-tight text-ink-900 dark:text-white">
-              FinProcure <span className="text-brand-600 dark:text-brand-300">AI</span>
-            </h1>
-            <p className="text-[12px] text-ink-400 dark:text-ink-300">การเงินพัสดุอัจฉริยะ</p>
-          </div>
+          <p className="mt-2 text-xs text-ink-400 dark:text-ink-300">
+            เข้าสู่ระบบเพื่อเริ่มใช้งาน
+          </p>
         </div>
 
         <div className="mt-7 space-y-4">
