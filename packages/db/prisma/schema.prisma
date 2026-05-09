@@ -570,6 +570,53 @@ model PriceSnapshot {
   @@map("price_snapshots")
 }
 
+// ─────────────────────────────────────────────
+// Phase 3.4 — Document templates
+// ─────────────────────────────────────────────
+
+model DocumentTemplate {
+  id          String   @id @default(cuid())
+  schoolId    String?  @map("school_id") // null = global / default
+  templateKey String   @map("template_key")
+  nameTh      String   @map("name_th")
+  description String?  @db.Text
+  category    String   // 'memo' | 'tor' | 'comparison' | 'evaluation' | 'po' | 'other'
+  htmlContent String   @map("html_content") @db.LongText
+  active      Boolean  @default(true)
+  version     Int      @default(1)
+  updatedById String?  @map("updated_by_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  documents ProcurementDocument[]
+
+  @@unique([schoolId, templateKey])
+  @@index([schoolId, category])
+  @@map("document_templates")
+}
+
+model ProcurementDocument {
+  id              String   @id @default(cuid())
+  schoolId        String   @map("school_id")
+  templateId      String   @map("template_id")
+  templateKey     String   @map("template_key")
+  templateVersion Int      @map("template_version")
+  refType         String   @map("ref_type") // 'PurchaseRequest'
+  refId           String   @map("ref_id")
+  docNo           String?  @map("doc_no")
+  title           String
+  renderedHtml    String   @map("rendered_html") @db.LongText
+  contextData     Json     @map("context_data")
+  generatedById   String?  @map("generated_by_id")
+  generatedAt     DateTime @default(now()) @map("generated_at")
+
+  template DocumentTemplate @relation(fields: [templateId], references: [id])
+
+  @@index([schoolId, refType, refId])
+  @@index([templateKey, generatedAt])
+  @@map("procurement_documents")
+}
+
 model Attachment {
   id           String   @id @default(cuid())
   schoolId     String   @map("school_id")

@@ -16,6 +16,7 @@ import { RuleConfigsModule } from './rule-configs/rule-configs.module';
 import { VendorsModule } from './vendors/vendors.module';
 import { QuotationsModule } from './quotations/quotations.module';
 import { ApprovalsModule } from './approvals/approvals.module';
+import { DocumentsModule } from './documents/documents.module';
 import { HealthController } from './health/health.controller';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
@@ -42,6 +43,7 @@ import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
     VendorsModule,
     QuotationsModule,
     ApprovalsModule,
+    DocumentsModule,
   ],
   controllers: [HealthController],
   providers: [

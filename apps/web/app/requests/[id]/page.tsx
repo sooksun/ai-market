@@ -239,6 +239,11 @@ export default async function RequestDetailPage({
                   </Button>
                 </Link>
               )}
+              <Link href={`/requests/${pr.id}/documents` as never}>
+                <Button variant="outline" size="sm" icon="FileText">
+                  เอกสารราชการ
+                </Button>
+              </Link>
             </>
           }
         />

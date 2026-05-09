@@ -1,5 +1,6 @@
 import { PrismaClient, Role } from '@prisma/client';
 import bcrypt from 'bcryptjs';
+import { DEFAULT_TEMPLATES } from './templates';
 
 const prisma = new PrismaClient();
 
@@ -239,8 +240,29 @@ async function main() {
     });
   }
 
+  // Phase 3.4: default document templates
+  let templateCount = 0;
+  for (const t of DEFAULT_TEMPLATES) {
+    const existing = await prisma.documentTemplate.findUnique({
+      where: { schoolId_templateKey: { schoolId: school.id, templateKey: t.templateKey } },
+    });
+    if (!existing) {
+      await prisma.documentTemplate.create({
+        data: {
+          schoolId: school.id,
+          templateKey: t.templateKey,
+          nameTh: t.nameTh,
+          category: t.category,
+          description: t.description,
+          htmlContent: t.htmlContent,
+        },
+      });
+      templateCount++;
+    }
+  }
+
   console.log(
-    `Seeded school "${school.name}" (id=${school.id}) + ${seedUsers.length} users + ${ruleSeeds.length} rules + ${projectSeeds.length} projects + ${budgetSeeds.length} budget sources + ${allocCount} budget allocations + ${vendorSeeds.length} vendors`,
+    `Seeded school "${school.name}" (id=${school.id}) + ${seedUsers.length} users + ${ruleSeeds.length} rules + ${projectSeeds.length} projects + ${budgetSeeds.length} budget sources + ${allocCount} budget allocations + ${vendorSeeds.length} vendors + ${templateCount} document templates`,
   );
   console.log(`Default password for all seeded users: ${DEFAULT_PASSWORD}`);
 }
