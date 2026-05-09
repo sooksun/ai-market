@@ -54,27 +54,56 @@
     "CANCELLED": "ยกเลิก"
   },
   "auditAction": {
-    "auth.login": "เข้าสู่ระบบ",
-    "auth.logout": "ออกจากระบบ",
-    "purchase_request.create": "สร้างคำขอซื้อ",
-    "purchase_request.update": "แก้ไขคำขอซื้อ",
-    "purchase_request.submit": "ส่งเรื่อง",
-    "purchase_request.withdraw": "ถอนเรื่อง",
-    "purchase_request.claim": "รับเรื่องเข้าตรวจ",
-    "purchase_request.return": "ส่งกลับแก้ไข",
-    "purchase_request.approve_for_comparison": "อนุมัติเข้ารอบเปรียบเทียบ",
-    "purchase_request.dismiss_risk_flag": "ปิด risk flag",
-    "rule_config.create": "สร้าง rule config",
-    "rule_config.update": "แก้ rule config",
-    "rule_config.delete": "ลบ rule config",
-    "ai.parse_items": "AI: แยกรายการ",
-    "ai.parse_items_upload": "AI: แยกรายการจากไฟล์",
-    "ai.check_cloudiness": "AI: ตรวจความคลุมเครือ"
+    "auth": {
+      "login": "เข้าสู่ระบบ",
+      "logout": "ออกจากระบบ"
+    },
+    "purchase_request": {
+      "create": "สร้างคำขอซื้อ",
+      "update": "แก้ไขคำขอซื้อ",
+      "submit": "ส่งเรื่อง",
+      "withdraw": "ถอนเรื่อง",
+      "claim": "รับเรื่องเข้าตรวจ",
+      "return": "ส่งกลับแก้ไข",
+      "approve_for_comparison": "อนุมัติเข้ารอบเปรียบเทียบ",
+      "dismiss_risk_flag": "ปิด risk flag",
+      "apply_specifications": "แก้ไขสเปก"
+    },
+    "rule_config": {
+      "create": "สร้าง rule config",
+      "update": "แก้ rule config",
+      "delete": "ลบ rule config"
+    },
+    "project": {
+      "create": "สร้างโครงการ",
+      "update": "แก้โครงการ",
+      "delete": "ลบโครงการ"
+    },
+    "budget_source": {
+      "create": "สร้างแหล่งงบ",
+      "update": "แก้แหล่งงบ",
+      "delete": "ลบแหล่งงบ"
+    },
+    "budget": {
+      "allocate": "จัดสรรงบ",
+      "update": "แก้ไขจำนวนจัดสรร",
+      "delete": "ลบ allocation"
+    },
+    "ai": {
+      "parse_items": "AI: แยกรายการ",
+      "parse_items_upload": "AI: แยกรายการจากไฟล์",
+      "check_cloudiness": "AI: ตรวจความคลุมเครือ",
+      "spec_writer": "AI: เขียนสเปก"
+    }
   },
   "entityType": {
     "PurchaseRequest": "คำขอซื้อ",
+    "PurchaseRequestItem": "รายการพัสดุ",
     "AiInvocation": "การเรียก AI",
     "AiRiskFlag": "risk flag",
-    "RuleConfig": "rule config"
+    "RuleConfig": "rule config",
+    "Project": "โครงการ",
+    "BudgetSource": "แหล่งงบ",
+    "Budget": "งบ allocation"
   }
 }
