@@ -23,6 +23,7 @@ import { InventoryModule } from './inventory/inventory.module';
 import { AssetsModule } from './assets/assets.module';
 import { FinanceModule } from './finance/finance.module';
 import { AuditModule } from './audit/audit.module';
+import { NotificationsModule } from './notifications/notifications.module';
 import { HealthController } from './health/health.controller';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { CsrfGuard } from './common/guards/csrf.guard';
@@ -57,6 +58,7 @@ import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
     AssetsModule,
     FinanceModule,
     AuditModule,
+    NotificationsModule,
   ],
   controllers: [HealthController],
   providers: [

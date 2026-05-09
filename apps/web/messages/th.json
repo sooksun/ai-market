@@ -124,6 +124,7 @@
     "Tenant": "โรงเรียน",
     "School": "โรงเรียน",
     "ProcurementDocument": "เอกสาร",
-    "DocumentTemplate": "template เอกสาร"
+    "DocumentTemplate": "template เอกสาร",
+    "Notification": "การแจ้งเตือน"
   }
 }

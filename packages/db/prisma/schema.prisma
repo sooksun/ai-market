@@ -242,9 +242,40 @@ model User {
   purchaseRequests PurchaseRequest[] @relation("RequesterRequests")
   auditScans       AuditScan[]       @relation("AuditScanner")
   refreshTokens    RefreshToken[]
+  notifications    Notification[]
 
   @@index([schoolId])
   @@map("users")
+}
+
+enum NotificationType {
+  PR_RETURNED
+  PR_APPROVED
+  PR_REJECTED
+  APPROVAL_PENDING
+  RECEIVING_PENDING
+  RISK_FLAG_NEW
+  OTHER
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  schoolId  String           @map("school_id")
+  userId    String           @map("user_id")
+  type      NotificationType
+  title     String
+  body      String?          @db.Text
+  refType   String?          @map("ref_type")
+  refId     String?          @map("ref_id")
+  actorId   String?          @map("actor_id")
+  readAt    DateTime?        @map("read_at")
+  createdAt DateTime         @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt, createdAt])
+  @@index([schoolId, createdAt])
+  @@map("notifications")
 }
 
 model RefreshToken {

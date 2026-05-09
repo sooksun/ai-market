@@ -5,7 +5,6 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
-  Bell,
   CheckIcon,
   ChevronRight,
   Moon,
@@ -21,6 +20,7 @@ import * as Lucide from 'lucide-react';
 import { Avatar } from './ui/avatar';
 import { classNames } from './ui/format';
 import { TenantSwitcher } from './tenant-switcher';
+import { NotificationBell } from './notification-bell';
 
 export interface NavItemResolved {
   href: string;
@@ -253,13 +253,7 @@ export function AppShellClient({
               <Moon className="w-4 h-4" strokeWidth={1.75} />
             )}
           </button>
-          <button
-            type="button"
-            className="relative p-2 rounded-lg hover:bg-ink-100/70 dark:hover:bg-ink-800/40 text-ink-500 dark:text-ink-300"
-          >
-            <Bell className="w-4 h-4" strokeWidth={1.75} />
-            <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-rose-500" />
-          </button>
+          <NotificationBell />
           <button
             type="button"
             onClick={() => setCopilotOpen(true)}

@@ -14,6 +14,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { CloudinessService } from '../ai/services/cloudiness.service';
 import { BudgetsService } from '../budgets/budgets.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import type { AuthenticatedUser } from '../common/decorators/current-user.decorator';
 
 const TRANSITIONS: Record<PrStatusType, PrStatusType[]> = {
@@ -57,6 +58,7 @@ export class PrService {
     private prisma: PrismaService,
     private cloudiness: CloudinessService,
     private budgets: BudgetsService,
+    private notifications: NotificationsService,
   ) {}
 
   async list(user: AuthenticatedUser, q: ListQuery) {
@@ -357,6 +359,17 @@ export class PrService {
     } catch (err) {
       console.warn(`[pr.return] budget release failed for PR ${id}:`, err);
     }
+    // Notify the requester.
+    this.notifications.notifySafe({
+      schoolId: pr.schoolId,
+      userId: pr.requesterId,
+      type: 'PR_RETURNED',
+      title: `คำขอ ${pr.docNo ?? pr.title} ถูกส่งกลับแก้ไข`,
+      body: reason,
+      refType: 'PurchaseRequest',
+      refId: id,
+      actorId: user.id,
+    });
     return result;
   }
 

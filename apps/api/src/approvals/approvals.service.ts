@@ -8,6 +8,7 @@ import {
 import { PurchaseRequestStatus, Role } from '@ai-market/db';
 import { PrismaService } from '../prisma/prisma.service';
 import { BudgetsService } from '../budgets/budgets.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import type { AuthenticatedUser } from '../common/decorators/current-user.decorator';
 
 const FALLBACK_TEMPLATE = {
@@ -31,7 +32,38 @@ export class ApprovalsService {
   constructor(
     private prisma: PrismaService,
     private budgets: BudgetsService,
+    private notifications: NotificationsService,
   ) {}
+
+  private async notifyRequester(
+    prId: string,
+    type: 'PR_APPROVED' | 'PR_REJECTED' | 'PR_RETURNED',
+    title: string,
+    body: string,
+    actorId: string,
+  ) {
+    try {
+      const pr = await this.prisma.purchaseRequest.findUnique({
+        where: { id: prId },
+        select: { schoolId: true, requesterId: true, docNo: true, title: true },
+      });
+      if (!pr) return;
+      this.notifications.notifySafe({
+        schoolId: pr.schoolId,
+        userId: pr.requesterId,
+        type,
+        title,
+        body,
+        refType: 'PurchaseRequest',
+        refId: prId,
+        actorId,
+      });
+    } catch (err) {
+      this.logger.warn(
+        `notify requester failed for PR ${prId}: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
+  }
 
   /**
    * Create or replace the workflow for a PR.
@@ -141,10 +173,22 @@ export class ApprovalsService {
           data: { currentStep: step.ordinal + 1 },
         });
       }
-      return tx.approvalWorkflow.findUniqueOrThrow({
+      const result = await tx.approvalWorkflow.findUniqueOrThrow({
         where: { id: wf.id },
         include: { steps: { orderBy: { ordinal: 'asc' } } },
       });
+      return { result, isLastStep };
+    }).then(async ({ result, isLastStep }) => {
+      if (isLastStep) {
+        await this.notifyRequester(
+          prId,
+          'PR_APPROVED',
+          'คำขอซื้อได้รับอนุมัติแล้ว',
+          comment ? `ความเห็น: ${comment}` : 'ผ่านการอนุมัติทุกขั้นแล้ว',
+          user.id,
+        );
+      }
+      return result;
     });
   }
 
@@ -183,6 +227,13 @@ export class ApprovalsService {
         `budget release failed after reject for PR ${prId}: ${err instanceof Error ? err.message : String(err)}`,
       );
     }
+    await this.notifyRequester(
+      prId,
+      'PR_REJECTED',
+      'คำขอซื้อไม่ได้รับอนุมัติ',
+      comment,
+      user.id,
+    );
     return result;
   }
 
@@ -229,6 +280,13 @@ export class ApprovalsService {
         `budget release failed after return for PR ${prId}: ${err instanceof Error ? err.message : String(err)}`,
       );
     }
+    await this.notifyRequester(
+      prId,
+      'PR_RETURNED',
+      `คำขอซื้อถูกส่งกลับแก้ไขที่ขั้น "${step.title}"`,
+      comment,
+      user.id,
+    );
     return result;
   }
 
