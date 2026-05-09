@@ -156,12 +156,20 @@ export function ComparisonClient({ data, canSelect }: Props) {
             }
           />
           {!aiResp ? (
-            <div className="mt-3 flex flex-wrap items-center gap-3">
-              <Button onClick={callAi} disabled={aiLoading} icon="Sparkles">
-                {aiLoading ? 'AI กำลังวิเคราะห์...' : 'ให้ AI สรุปและแนะนำ'}
-              </Button>
-              {aiError && (
-                <span className="text-sm text-rose-600 dark:text-rose-300">{aiError}</span>
+            <div className="mt-3 space-y-3">
+              <div className="flex flex-wrap items-center gap-3">
+                <Button onClick={callAi} disabled={aiLoading} icon="Sparkles">
+                  {aiLoading ? 'AI กำลังวิเคราะห์...' : 'ให้ AI สรุปและแนะนำ'}
+                </Button>
+                {aiError && (
+                  <span className="text-sm text-rose-600 dark:text-rose-300">{aiError}</span>
+                )}
+              </div>
+              {aiLoading && (
+                <div className="grid gap-3 lg:grid-cols-2">
+                  <AiSkeletonCard />
+                  <AiSkeletonCard />
+                </div>
               )}
             </div>
           ) : (
@@ -487,6 +495,20 @@ export function ComparisonClient({ data, canSelect }: Props) {
           </Card>
         </div>
       )}
+    </div>
+  );
+}
+
+function AiSkeletonCard() {
+  return (
+    <div className="rounded-2xl bg-ink-50/60 dark:bg-ink-900/40 p-4 animate-pulse">
+      <div className="h-3 w-28 rounded bg-ink-200/80 dark:bg-ink-700" />
+      <div className="mt-2 h-7 w-40 rounded bg-ink-200/80 dark:bg-ink-700" />
+      <div className="mt-3 space-y-2">
+        <div className="h-3 w-full rounded bg-ink-200/60 dark:bg-ink-700/70" />
+        <div className="h-3 w-5/6 rounded bg-ink-200/60 dark:bg-ink-700/70" />
+        <div className="h-3 w-2/3 rounded bg-ink-200/60 dark:bg-ink-700/70" />
+      </div>
     </div>
   );
 }

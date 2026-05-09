@@ -196,6 +196,19 @@ export class QuotationsService {
     reason: string,
   ) {
     this.requireRole(user, ['PROCUREMENT', 'ADMIN']);
+
+    const target = await this.prisma.vendorQuotation.findUnique({ where: { id: qId } });
+    if (!target || target.purchaseRequestId !== prId) {
+      throw new NotFoundException({ code: 'NOT_FOUND', message: 'ไม่พบใบเสนอราคา' });
+    }
+
+    // Idempotent: if the target is already SELECTED, return it without re-running
+    // the transaction or restarting the workflow. Handles double-clicks and
+    // duplicate-submit retries cleanly.
+    if (target.status === 'SELECTED') {
+      return target;
+    }
+
     const pr = await this.assertPrInScope(user, prId);
     if (!COMPARISON_STATUSES.includes(pr.status)) {
       throw new ConflictException({
@@ -203,11 +216,6 @@ export class QuotationsService {
         message: 'เลือกใบเสนอราคาได้เฉพาะ PR ใน APPROVED_FOR_COMPARISON / IN_COMPARISON',
         details: { current: pr.status },
       });
-    }
-
-    const target = await this.prisma.vendorQuotation.findUnique({ where: { id: qId } });
-    if (!target || target.purchaseRequestId !== prId) {
-      throw new NotFoundException({ code: 'NOT_FOUND', message: 'ไม่พบใบเสนอราคา' });
     }
 
     const result = await this.prisma.$transaction(async (tx) => {

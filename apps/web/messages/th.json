@@ -109,6 +109,39 @@
     },
     "document_template": {
       "update": "แก้ template"
+    },
+    "vendor": {
+      "create": "เพิ่มผู้ขาย",
+      "update": "แก้ไขผู้ขาย",
+      "delete": "ลบผู้ขาย"
+    },
+    "quotation": {
+      "create": "สร้างใบเสนอราคา",
+      "update": "แก้ไขใบเสนอราคา",
+      "withdraw": "ถอนใบเสนอราคา",
+      "select": "เลือกใบเสนอราคา"
+    },
+    "approval": {
+      "approve": "อนุมัติ",
+      "reject": "ไม่อนุมัติ",
+      "return": "ส่งกลับแก้ไขจากสายอนุมัติ"
+    },
+    "receiving": {
+      "start": "เริ่มตรวจรับ",
+      "record_item": "บันทึกผลตรวจรับรายการ",
+      "finalize": "ปิดงานตรวจรับ"
+    },
+    "inventory": {
+      "issue_out": "เบิก/จ่ายวัสดุ"
+    },
+    "asset": {
+      "update": "แก้ทะเบียนครุภัณฑ์"
+    },
+    "voucher": {
+      "ensure": "สร้างใบสำคัญ",
+      "issue": "ออกเลขใบสำคัญ",
+      "pay": "บันทึกการจ่าย",
+      "cancel": "ยกเลิกใบสำคัญ"
     }
   },
   "entityType": {
@@ -125,6 +158,15 @@
     "School": "โรงเรียน",
     "ProcurementDocument": "เอกสาร",
     "DocumentTemplate": "template เอกสาร",
-    "Notification": "การแจ้งเตือน"
+    "Notification": "การแจ้งเตือน",
+    "Vendor": "ผู้ขาย",
+    "VendorQuotation": "ใบเสนอราคา",
+    "ApprovalWorkflow": "สายอนุมัติ",
+    "ApprovalStep": "ขั้นอนุมัติ",
+    "ReceivingRecord": "ใบตรวจรับ",
+    "ReceivingItem": "รายการตรวจรับ",
+    "InventoryItem": "วัสดุในคลัง",
+    "AssetRegister": "ทะเบียนครุภัณฑ์",
+    "FinanceVoucher": "ใบสำคัญ"
   }
 }
