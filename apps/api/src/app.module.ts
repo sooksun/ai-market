@@ -22,6 +22,7 @@ import { ReceivingsModule } from './receivings/receivings.module';
 import { InventoryModule } from './inventory/inventory.module';
 import { AssetsModule } from './assets/assets.module';
 import { FinanceModule } from './finance/finance.module';
+import { AuditModule } from './audit/audit.module';
 import { HealthController } from './health/health.controller';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
@@ -54,6 +55,7 @@ import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
     InventoryModule,
     AssetsModule,
     FinanceModule,
+    AuditModule,
   ],
   controllers: [HealthController],
   providers: [

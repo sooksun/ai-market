@@ -74,6 +74,8 @@ enum RiskType {
   BUDGET_OVERRUN
   REASON_MISSING
   CLASSIFICATION_UNCERTAIN
+  VENDOR_CONCENTRATION
+  NEAR_THRESHOLD_SPLIT
   OTHER
 }
 
@@ -101,6 +103,7 @@ model School {
   projects         Project[]
   budgetSources    BudgetSource[]
   vendors          Vendor[]
+  auditScans       AuditScan[]
 
   @@map("schools")
 }
@@ -218,6 +221,7 @@ model User {
   auditLogs        AuditLog[]
   ruleUpdates      RuleConfig[]      @relation("RuleUpdater")
   purchaseRequests PurchaseRequest[] @relation("RequesterRequests")
+  auditScans       AuditScan[]       @relation("AuditScanner")
 
   @@index([schoolId])
   @@map("users")
@@ -388,6 +392,7 @@ model AiRiskFlag {
   id                String    @id @default(cuid())
   purchaseRequestId String?   @map("purchase_request_id")
   itemId            String?   @map("item_id")
+  auditScanId       String?   @map("audit_scan_id")
   type              RiskType
   severity          RiskSeverity @default(MEDIUM)
   message           String    @db.Text
@@ -401,11 +406,37 @@ model AiRiskFlag {
 
   purchaseRequest PurchaseRequest?     @relation(fields: [purchaseRequestId], references: [id], onDelete: Cascade)
   item            PurchaseRequestItem? @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  auditScan       AuditScan?           @relation(fields: [auditScanId], references: [id], onDelete: SetNull)
 
   @@index([purchaseRequestId])
   @@index([itemId])
+  @@index([auditScanId])
   @@index([type, severity])
   @@map("ai_risk_flags")
+}
+
+// ─────────────────────────────────────────────
+// Phase 5A — AI Audit (on-demand scan)
+// ─────────────────────────────────────────────
+
+model AuditScan {
+  id             String   @id @default(cuid())
+  schoolId       String   @map("school_id")
+  ranById        String   @map("ran_by_id")
+  scope          Json
+  prCount        Int      @default(0) @map("pr_count")
+  flagCount      Int      @default(0) @map("flag_count")
+  aiInvocationId String?  @map("ai_invocation_id")
+  notes          String?  @db.Text
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  school School       @relation(fields: [schoolId], references: [id])
+  ranBy  User         @relation("AuditScanner", fields: [ranById], references: [id])
+  flags  AiRiskFlag[]
+
+  @@index([schoolId, createdAt])
+  @@index([ranById, createdAt])
+  @@map("audit_scans")
 }
 
 // ─────────────────────────────────────────────

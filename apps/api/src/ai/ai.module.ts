@@ -33,6 +33,7 @@ import { ANTHROPIC, createAnthropic } from './anthropic.client';
     SpecWriterService,
     CompareSummaryService,
     AiInvocationService,
+    ANTHROPIC,
   ],
 })
 export class AiModule {}

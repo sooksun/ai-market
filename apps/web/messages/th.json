@@ -18,6 +18,7 @@
     "inventory": "คลังวัสดุ",
     "assets": "ทะเบียนครุภัณฑ์",
     "finance": "งานการเงิน",
+    "auditScan": "AI Audit",
     "auditLogs": "Audit Logs",
     "adminVendors": "ผู้ขาย",
     "adminProjects": "โครงการ",
@@ -96,6 +97,9 @@
       "parse_items_upload": "AI: แยกรายการจากไฟล์",
       "check_cloudiness": "AI: ตรวจความคลุมเครือ",
       "spec_writer": "AI: เขียนสเปก"
+    },
+    "audit": {
+      "scan": "AI Audit: สแกนความเสี่ยง"
     }
   },
   "entityType": {
@@ -106,6 +110,7 @@
     "RuleConfig": "rule config",
     "Project": "โครงการ",
     "BudgetSource": "แหล่งงบ",
-    "Budget": "งบ allocation"
+    "Budget": "งบ allocation",
+    "AuditScan": "การสแกน AI Audit"
   }
 }

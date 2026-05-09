@@ -89,6 +89,14 @@ const NAV: NavDef[] = [
   },
   // audit & system
   {
+    href: '/audit',
+    labelKey: 'auditScan',
+    icon: 'scan-search',
+    group: 'audit',
+    ai: true,
+    rolesAny: ['AUDITOR', 'DIRECTOR', 'PROCUREMENT', 'ADMIN'],
+  },
+  {
     href: '/audit-logs',
     labelKey: 'auditLogs',
     icon: 'shield-check',
