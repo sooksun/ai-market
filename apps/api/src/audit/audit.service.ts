@@ -141,11 +141,31 @@ export class AuditService {
       }),
     }));
 
+    // Empty scope → record the scan attempt with zero counts and return
+    // an empty result. Returning 404 here was confusing for users who just
+    // ran a scan on a date range that happens to have no matching PRs.
     if (prs.length === 0) {
-      throw new NotFoundException({
-        code: 'NO_PRS_IN_SCOPE',
-        message: 'ไม่พบคำขอซื้อในขอบเขตที่เลือก',
+      const scan = await this.prisma.auditScan.create({
+        data: {
+          schoolId: user.schoolId,
+          ranById: user.id,
+          scope: (input as unknown) as Prisma.InputJsonValue,
+          prCount: 0,
+          flagCount: 0,
+          aiInvocationId: null,
+          notes: 'ไม่พบคำขอซื้อในขอบเขตที่เลือก',
+        },
       });
+      return {
+        scanId: scan.id,
+        prCount: 0,
+        flagCount: 0,
+        aiInvocationId: null,
+        flags: [],
+        bySeverity: { HIGH: 0, MEDIUM: 0, LOW: 0 },
+        byType: {},
+        notes: scan.notes,
+      };
     }
 
     // 1) Heuristic pass.
@@ -184,7 +204,25 @@ export class AuditService {
 
       const allFlags: HeuristicFlagDraft[] = [...heuristicFlags, ...aiFlags];
       const created: AuditScanFlag[] = [];
+      let dedupedSkipped = 0;
       for (const f of allFlags) {
+        // Dedup: skip if there's already an unread (un-dismissed) flag of the
+        // same (PR, item, type) from a previous scan. Re-running the same
+        // scope shouldn't pile up identical findings on the open-flags inbox.
+        const dup = await tx.aiRiskFlag.findFirst({
+          where: {
+            purchaseRequestId: f.purchaseRequestId,
+            itemId: f.itemId ?? null,
+            type: f.type,
+            dismissedAt: null,
+          },
+          select: { id: true },
+        });
+        if (dup) {
+          dedupedSkipped += 1;
+          continue;
+        }
+
         const row = await tx.aiRiskFlag.create({
           data: {
             purchaseRequestId: f.purchaseRequestId,
@@ -213,12 +251,17 @@ export class AuditService {
         });
       }
 
-      // refresh flag count exactly
+      // refresh flag count to reflect only newly-created (non-deduped) flags
       await tx.auditScan.update({
         where: { id: scan.id },
         data: { flagCount: created.length },
       });
 
+      if (dedupedSkipped > 0) {
+        this.logger.log(
+          `audit scan ${scan.id}: ${created.length} new flag(s), ${dedupedSkipped} deduped against existing unread`,
+        );
+      }
       return { scan, flags: created };
     });
 

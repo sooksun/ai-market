@@ -8,6 +8,7 @@ import {
   Req,
   Res,
   UseGuards,
+  UseInterceptors,
   UnauthorizedException,
 } from '@nestjs/common';
 import * as crypto from 'crypto';
@@ -25,6 +26,8 @@ import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe';
 import { CurrentUser, type AuthenticatedUser } from '../common/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CsrfExempt } from '../common/decorators/csrf-exempt.decorator';
+import { AuditAction } from '../common/decorators/audit-action.decorator';
+import { AuditInterceptor } from '../common/interceptors/audit.interceptor';
 
 const ACCESS_COOKIE = 'aim_session';
 const REFRESH_COOKIE = 'aim_refresh';
@@ -34,6 +37,7 @@ const ACCESS_TTL_MS = 15 * 60 * 1000;
 const REFRESH_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 @Controller('auth')
+@UseInterceptors(AuditInterceptor)
 export class AuthController {
   constructor(private auth: AuthService) {}
 
@@ -133,6 +137,7 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   @Post('switch-tenant')
   @HttpCode(HttpStatus.OK)
+  @AuditAction({ action: 'auth.switch_tenant', entityType: 'School' })
   async switchTenant(
     @CurrentUser() user: AuthenticatedUser,
     @Body(new ZodValidationPipe(SwitchTenantInputSchema)) body: SwitchTenantInput,
@@ -153,7 +158,9 @@ export class AuthController {
     const tokens = await this.auth.issueTokens(dbUser, body.schoolId, this.ctx(req));
     this.setAuthCookies(res, tokens.accessToken, tokens.refreshToken);
     this.setCsrfCookie(res);
-    return { ok: true, schoolId: body.schoolId };
+    // Return id alongside ok so AuditInterceptor's result.id fallback picks
+    // up the target school as the entity reference.
+    return { ok: true, id: body.schoolId, schoolId: body.schoolId };
   }
 
   private ctx(req: Request): IssueContext {
